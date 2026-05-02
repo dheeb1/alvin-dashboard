@@ -1,0 +1,70 @@
+{
+  "generated_at_iso": "2026-05-02T10:14:32-05:00",
+  "session_date": "2026-05-02",
+  "bot": {
+    "running": true,
+    "live_trade_types": ["BRAIN_STACK"],
+    "paper_full_session_types": [],
+    "trading_windows": [{"start_time": "0930", "end_time": "1000"}],
+    "last_heartbeat_iso": "2026-05-02T10:14:30-05:00",
+    "seconds_since_heartbeat": 2
+  },
+  "open_positions": [
+    {
+      "trade_id": 1116, "symbol": "QQQ 260502C679", "underlying": "QQQ", "side": "CALL", "strike": 679, "expiry": "2026-05-02",
+      "direction": "CALL", "entry_price": 1.10, "last_price": 1.24, "high_price": 1.31, "low_price": 1.08,
+      "unrealized_pnl_pct": 12.73,
+      "entry_time_iso": "2026-05-02T10:11:08-05:00", "last_update_iso": "2026-05-02T10:14:30-05:00",
+      "hold_sec": 204
+    }
+  ],
+  "stats_today": {
+    "trades_today": 6,
+    "wins": 4,
+    "losses": 2,
+    "win_rate_pct": 66.66666666666667,
+    "avg_win_pct": 12.4,
+    "avg_loss_pct": -9.1,
+    "best_pct": 22.4,
+    "worst_pct": -10.5,
+    "sum_pnl_pct": 31.4
+  },
+  "trades_today": [
+    {
+      "trade_id": 1115, "symbol": "QQQ 260502C676", "underlying": "QQQ", "side": "CALL", "strike": 676, "expiry": "2026-05-02",
+      "direction": "CALL", "entry_price": 1.85, "exit_price": 2.26, "pnl_pct": 22.16, "mfe_pct": 24.0, "mae_pct": -2.1,
+      "exit_reason": "floor_22", "hold_sec": 412,
+      "entry_time_iso": "2026-05-02T08:34:12-05:00", "exit_time_iso": "2026-05-02T08:41:04-05:00"
+    },
+    {
+      "trade_id": 1114, "symbol": "QQQ 260502P672", "underlying": "QQQ", "side": "PUT", "strike": 672, "expiry": "2026-05-02",
+      "direction": "PUT", "entry_price": 1.30, "exit_price": 1.18, "pnl_pct": -9.23, "mfe_pct": 3.8, "mae_pct": -10.1,
+      "exit_reason": "hard_stop_-9.2%_stop=9.1%", "hold_sec": 88,
+      "entry_time_iso": "2026-05-02T08:48:55-05:00", "exit_time_iso": "2026-05-02T08:50:23-05:00"
+    },
+    {
+      "trade_id": 1113, "symbol": "QQQ 260502C677", "underlying": "QQQ", "side": "CALL", "strike": 677, "expiry": "2026-05-02",
+      "direction": "CALL", "entry_price": 1.42, "exit_price": 1.61, "pnl_pct": 13.38, "mfe_pct": 15.5, "mae_pct": -1.0,
+      "exit_reason": "floor_12", "hold_sec": 215,
+      "entry_time_iso": "2026-05-02T09:12:18-05:00", "exit_time_iso": "2026-05-02T09:15:53-05:00"
+    },
+    {
+      "trade_id": 1112, "symbol": "QQQ 260502C677", "underlying": "QQQ", "side": "CALL", "strike": 677, "expiry": "2026-05-02",
+      "direction": "CALL", "entry_price": 1.50, "exit_price": 1.38, "pnl_pct": -8.0, "mfe_pct": 2.2, "mae_pct": -8.6,
+      "exit_reason": "hard_stop_-8.0%_stop=9.1%", "hold_sec": 64,
+      "entry_time_iso": "2026-05-02T09:21:01-05:00", "exit_time_iso": "2026-05-02T09:22:05-05:00"
+    },
+    {
+      "trade_id": 1111, "symbol": "QQQ 260502C678", "underlying": "QQQ", "side": "CALL", "strike": 678, "expiry": "2026-05-02",
+      "direction": "CALL", "entry_price": 1.20, "exit_price": 1.30, "pnl_pct": 8.33, "mfe_pct": 9.8, "mae_pct": -0.5,
+      "exit_reason": "floor_7", "hold_sec": 142,
+      "entry_time_iso": "2026-05-02T09:38:12-05:00", "exit_time_iso": "2026-05-02T09:40:34-05:00"
+    },
+    {
+      "trade_id": 1110, "symbol": "QQQ 260502P670", "underlying": "QQQ", "side": "PUT", "strike": 670, "expiry": "2026-05-02",
+      "direction": "PUT", "entry_price": 1.05, "exit_price": 1.10, "pnl_pct": 4.76, "mfe_pct": 6.1, "mae_pct": -1.2,
+      "exit_reason": "floor_breach_+4.8%<+7.0%_peak_+6.1%", "hold_sec": 78,
+      "entry_time_iso": "2026-05-02T09:51:44-05:00", "exit_time_iso": "2026-05-02T09:53:02-05:00"
+    }
+  ]
+}
