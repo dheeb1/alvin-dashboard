@@ -66,6 +66,26 @@
   .side-CALL { color: var(--green); font-weight: 600; }
   .side-PUT { color: var(--red); font-weight: 600; }
   .empty { padding: 24px; text-align: center; color: var(--dim); }
+  .scroll-x { overflow-x: auto; }
+  .verdict-CALL { color: var(--green); }
+  .verdict-PUT { color: var(--red); }
+  .verdict-CONT { color: var(--accent); }
+  .verdict-ABS_OVER { color: var(--yellow); }
+  .verdict-ABS_STUCK { color: var(--dim); }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; }
+  .section-head h2 { margin: 0; }
+  .btn {
+    background: var(--bg-3); color: var(--text);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 12px; font-family: inherit; font-size: 12px;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn:hover { background: var(--line); border-color: var(--accent); color: var(--accent); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .ratio-low { color: var(--red); }
+  .ratio-mid { color: var(--yellow); }
+  .ratio-hi  { color: var(--green); }
   footer {
     padding: 14px 22px; color: var(--dim); font-size: 11px; text-align: right;
     border-top: 1px solid var(--line); background: var(--bg-2);
@@ -97,8 +117,18 @@
 </section>
 
 <section>
-  <h2>Trades Today</h2>
+  <div class="section-head">
+    <h2>Trades Today</h2>
+    <button class="btn" id="csv-btn" disabled>Download CSV</button>
+  </div>
   <div id="trades-wrap">
+    <div class="empty">loading…</div>
+  </div>
+</section>
+
+<section>
+  <h2>Trade Breakdown · vol / abs / dir2x2</h2>
+  <div id="breakdown-wrap" class="scroll-x">
     <div class="empty">loading…</div>
   </div>
 </section>
@@ -216,8 +246,10 @@
     const trades = snap.trades_today || [];
     if (!trades.length) {
       $("trades-wrap").innerHTML = `<div class="empty">No trades yet today.</div>`;
+      $("csv-btn").disabled = true;
       return;
     }
+    $("csv-btn").disabled = false;
     const rows = trades.map(t => {
       const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
       const pnlCls = fmtPctCls(t.pnl_pct);
@@ -245,6 +277,122 @@
       </table>`;
   }
 
+  // -------- Breakdown table (vol / abs / dir2x2) --------
+  function ratioCls(v) {
+    if (v == null) return "";
+    if (v < 1.0) return "ratio-low";
+    if (v < 1.5) return "ratio-mid";
+    return "ratio-hi";
+  }
+  function fmtNum(v, dp = 3) {
+    if (v == null || v === "") return "—";
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(dp) : String(v);
+  }
+  function verdictCell(v) {
+    if (!v) return `<td>—</td>`;
+    return `<td class="verdict-${v}">${v}</td>`;
+  }
+
+  function renderBreakdown(snap) {
+    const trades = (snap.trades_today || []).filter(t => t.breakdown);
+    if (!trades.length) {
+      $("breakdown-wrap").innerHTML = `<div class="empty">No breakdown rows yet.</div>`;
+      return;
+    }
+    const rows = trades.map(t => {
+      const b = t.breakdown;
+      const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
+      const pnlCls = fmtPctCls(t.pnl_pct);
+      const vr = (k) => `<td class="num ${ratioCls(b[k])}">${b[k] == null ? "—" : Number(b[k]).toFixed(2)}</td>`;
+      const ab = (k) => `<td class="num">${fmtNum(b[k], 3)}</td>`;
+      return `<tr>
+        <td>${fmtTime(t.entry_time_iso)}</td>
+        <td><strong class="${sideClass}">${t.side || t.direction || ""}</strong></td>
+        <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
+        ${vr("vol_ratio_1m")}${vr("vol_ratio_3m")}${vr("vol_ratio_5m")}${vr("vol_ratio_15m")}
+        ${ab("abs_1m")}${ab("abs_3m")}${ab("abs_5m")}${ab("abs_15m")}
+        ${verdictCell(b.d2_v1)}${verdictCell(b.d2_v3)}${verdictCell(b.d2_v5)}${verdictCell(b.d2_v15)}
+        <td class="num">${b.d2_call_count ?? "—"}</td>
+        <td class="num">${b.d2_put_count ?? "—"}</td>
+        ${verdictCell(b.d2_direction)}
+      </tr>`;
+    }).join("");
+    $("breakdown-wrap").innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">Entry</th>
+            <th rowspan="2">Side</th>
+            <th rowspan="2" class="num">P&L</th>
+            <th colspan="4" style="text-align:center">Vol Ratio (× sessavg)</th>
+            <th colspan="4" style="text-align:center">Absorption Avg</th>
+            <th colspan="4" style="text-align:center">DIR2X2 Verdict</th>
+            <th rowspan="2" class="num">C</th>
+            <th rowspan="2" class="num">P</th>
+            <th rowspan="2">D2 Dir</th>
+          </tr>
+          <tr>
+            <th class="num">1m</th><th class="num">3m</th><th class="num">5m</th><th class="num">15m</th>
+            <th class="num">1m</th><th class="num">3m</th><th class="num">5m</th><th class="num">15m</th>
+            <th>1m</th><th>3m</th><th>5m</th><th>15m</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // -------- CSV export --------
+  // Flatten one trade (top-level + breakdown.*) into a single row dict
+  function flattenTrade(t) {
+    const flat = {};
+    for (const k of Object.keys(t)) {
+      if (k === "breakdown") continue;
+      flat[k] = t[k];
+    }
+    if (t.breakdown) {
+      for (const k of Object.keys(t.breakdown)) {
+        flat[k] = t.breakdown[k];
+      }
+    }
+    return flat;
+  }
+  function csvEscape(v) {
+    if (v == null) return "";
+    const s = String(v);
+    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+  }
+  function buildCsv(trades) {
+    if (!trades.length) return "";
+    const flats = trades.map(flattenTrade);
+    // Union of all keys, preserving first-seen order
+    const seen = new Set();
+    const cols = [];
+    for (const r of flats) {
+      for (const k of Object.keys(r)) {
+        if (!seen.has(k)) { seen.add(k); cols.push(k); }
+      }
+    }
+    const lines = [cols.join(",")];
+    for (const r of flats) lines.push(cols.map(c => csvEscape(r[c])).join(","));
+    return lines.join("\r\n");
+  }
+  function downloadCsv(snap) {
+    const trades = snap?.trades_today || [];
+    if (!trades.length) return;
+    const csv = buildCsv(trades);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flipper_${snap.session_date || "today"}_trade_breakdown.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -258,6 +406,7 @@
   }
 
   let lastOk = null;
+  let lastSnap = null;
   async function tick() {
     try {
       // Cache-buster: gist raw URLs are CDN-cached up to ~60s; this nudges a fresh fetch.
@@ -265,10 +414,12 @@
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const snap = await res.json();
+      lastSnap = snap;
       setStatus(snap);
       renderStats(snap);
       renderOpenPositions(snap);
       renderTrades(snap);
+      renderBreakdown(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
@@ -276,6 +427,7 @@
       $("last-update").className = "red";
     }
   }
+  $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
   tick();
   setInterval(tick, REFRESH_MS);
 </script>
