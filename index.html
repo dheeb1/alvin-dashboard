@@ -86,6 +86,7 @@
   .ratio-low { color: var(--red); }
   .ratio-mid { color: var(--yellow); }
   .ratio-hi  { color: var(--green); }
+  .dim-num   { color: var(--dim); }
   footer {
     padding: 14px 22px; color: var(--dim); font-size: 11px; text-align: right;
     border-top: 1px solid var(--line); background: var(--bg-2);
@@ -100,6 +101,8 @@
   <div class="row">
     <span class="pill" id="mode-pill"><span class="dot"></span><span id="mode-text">…</span></span>
     <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></span>
+    <span class="pill" id="streak-pill" style="display:none"><span id="streak-text">—</span></span>
+    <span class="pill" id="regime-pill" style="display:none"><span id="regime-text">—</span></span>
     <span class="pill"><span id="last-update">—</span></span>
   </div>
 </header>
@@ -242,6 +245,11 @@
       </table>`;
   }
 
+  function fmtStreak(side, count) {
+    if (!side || count == null) return `<span class="tiny">—</span>`;
+    return `<span class="${streakClass(side)}">${side[0]}/${count}</span>`;
+  }
+
   function renderTrades(snap) {
     const trades = snap.trades_today || [];
     if (!trades.length) {
@@ -260,8 +268,12 @@
         <td class="num">${fmtPrice(t.entry_price)}</td>
         <td class="num">${fmtPrice(t.exit_price)}</td>
         <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
-        <td class="num">${fmtPct(t.mfe_pct)}</td>
+        <td class="num green">${fmtPct(t.mfe_pct)}</td>
+        <td class="num red">${fmtPct(t.mae_pct)}</td>
         <td class="num">${fmtDur(t.hold_sec)}</td>
+        <td class="num">${fmtStreak(t.s3_side, t.s3_count)}</td>
+        <td class="num">${fmtStreak(t.s6_side, t.s6_count)}</td>
+        <td class="num">${fmtStreak(t.s9_side, t.s9_count)}</td>
         <td class="tiny">${t.exit_reason || ""}</td>
       </tr>`;
     }).join("");
@@ -270,7 +282,9 @@
         <thead><tr>
           <th>Entry</th><th>Exit</th><th>Contract</th>
           <th class="num">Entry $</th><th class="num">Exit $</th>
-          <th class="num">P&L</th><th class="num">MFE</th><th class="num">Held</th>
+          <th class="num">P&L</th><th class="num">MFE</th><th class="num">MAE</th>
+          <th class="num">Held</th>
+          <th class="num">s3</th><th class="num">s6</th><th class="num">s9</th>
           <th>Reason</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -294,6 +308,12 @@
     return `<td class="verdict-${v}">${v}</td>`;
   }
 
+  function countCell(v) {
+    if (v == null) return `<td class="num">—</td>`;
+    const cls = v >= 3 ? "green" : "dim-num";
+    return `<td class="num ${cls}">${v}</td>`;
+  }
+
   function renderBreakdown(snap) {
     const trades = (snap.trades_today || []).filter(t => t.breakdown);
     if (!trades.length) {
@@ -312,13 +332,17 @@
         <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
         ${vr("vol_ratio_1m")}${vr("vol_ratio_3m")}${vr("vol_ratio_5m")}${vr("vol_ratio_15m")}
         ${ab("abs_1m")}${ab("abs_3m")}${ab("abs_5m")}${ab("abs_15m")}
-        ${verdictCell(b.d2_v1)}${verdictCell(b.d2_v3)}${verdictCell(b.d2_v5)}${verdictCell(b.d2_v15)}
-        <td class="num">${b.d2_call_count ?? "—"}</td>
-        <td class="num">${b.d2_put_count ?? "—"}</td>
+        ${verdictCell(b.d2_v1)}${verdictCell(b.d2_v3)}${verdictCell(b.d2_v6)}${verdictCell(b.d2_v9)}${verdictCell(b.d2_v15)}
+        ${countCell(b.d2_call_count)}
+        ${countCell(b.d2_put_count)}
         ${verdictCell(b.d2_direction)}
       </tr>`;
     }).join("");
     $("breakdown-wrap").innerHTML = `
+      <div class="tiny" style="margin-bottom:6px">
+        DIR2X2: 5 voters (1m/3m/6m/9m/15m) · needs ≥3 of 5 to fire ·
+        Abs gate: ≥2 of 1m/3m/5m/15m ≤ 0.90 · Vol gate: r15m ≥ 1.05
+      </div>
       <table>
         <thead>
           <tr>
@@ -327,7 +351,7 @@
             <th rowspan="2" class="num">P&L</th>
             <th colspan="4" style="text-align:center">Vol Ratio (× sessavg)</th>
             <th colspan="4" style="text-align:center">Absorption Avg</th>
-            <th colspan="4" style="text-align:center">DIR2X2 Verdict</th>
+            <th colspan="5" style="text-align:center">DIR2X2 Verdict</th>
             <th rowspan="2" class="num">C</th>
             <th rowspan="2" class="num">P</th>
             <th rowspan="2">D2 Dir</th>
@@ -335,7 +359,7 @@
           <tr>
             <th class="num">1m</th><th class="num">3m</th><th class="num">5m</th><th class="num">15m</th>
             <th class="num">1m</th><th class="num">3m</th><th class="num">5m</th><th class="num">15m</th>
-            <th>1m</th><th>3m</th><th>5m</th><th>15m</th>
+            <th>1m</th><th>3m</th><th>6m</th><th>9m</th><th>15m</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -393,6 +417,16 @@
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
+  function streakClass(side) {
+    return side === "CALL" ? "verdict-CALL" : side === "PUT" ? "verdict-PUT" : "";
+  }
+  function regimeClass(r) {
+    if (r == null) return "";
+    if (r <= 1.5) return "green";  // trend
+    if (r > 3.0) return "red";     // chop
+    return "";                     // normal band
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -402,6 +436,26 @@
     const [mt, mc] = modeText(bot);
     $("mode-text").textContent = mt;
     $("mode-text").className = mc;
+
+    // s9 streak pill — hide if oracle hasn't logged anything yet
+    const oracle = snap?.live_oracle;
+    if (oracle && oracle.s9_side && oracle.s9_count != null) {
+      $("streak-pill").style.display = "";
+      $("streak-text").innerHTML = `s9 · <span class="${streakClass(oracle.s9_side)}">${oracle.s9_side} ${oracle.s9_count}</span>`;
+    } else {
+      $("streak-pill").style.display = "none";
+    }
+
+    // range/ORB regime pill — hide if no journal data yet
+    const regime = snap?.live_regime;
+    if (regime && regime.range_orb_ratio != null) {
+      $("regime-pill").style.display = "";
+      const r = regime.range_orb_ratio;
+      $("regime-text").innerHTML = `R/ORB · <span class="${regimeClass(r)}">${r.toFixed(2)}</span>`;
+    } else {
+      $("regime-pill").style.display = "none";
+    }
+
     $("generated-at").textContent = `generated ${fmtTime(snap?.generated_at_iso)}`;
   }
 
