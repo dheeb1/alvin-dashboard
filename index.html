@@ -72,6 +72,15 @@
   .verdict-CONT { color: var(--accent); }
   .verdict-ABS_OVER { color: var(--yellow); }
   .verdict-ABS_STUCK { color: var(--dim); }
+  .calc-MATCH    { color: var(--green); font-weight: 600; }
+  .calc-OPPOSITE { color: var(--red); font-weight: 700; background: rgba(255,80,80,0.10); }
+  .calc-NONE     { color: var(--dim); }
+  .picker-high   { color: var(--green); font-weight: 700; }
+  .picker-low    { color: var(--dim); }
+  .stacked-pass  { background: rgba(80,200,120,0.10); }
+  .star          { color: var(--accent); font-weight: 700; }
+  .watch-strip   { padding: 6px 8px; background: var(--bg-3); border-radius: 4px; margin-bottom: 6px; font-size: 11px; }
+  .watch-strip strong { color: var(--text); }
   .section-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; }
   .section-head h2 { margin: 0; }
   .btn {
@@ -103,6 +112,7 @@
     <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></span>
     <span class="pill" id="streak-pill" style="display:none"><span id="streak-text">—</span></span>
     <span class="pill" id="regime-pill" style="display:none"><span id="regime-text">—</span></span>
+    <span class="pill" id="m-pill" style="display:none"><span id="m-text">—</span></span>
     <span class="pill"><span id="last-update">—</span></span>
   </div>
 </header>
@@ -320,42 +330,125 @@
       $("breakdown-wrap").innerHTML = `<div class="empty">No breakdown rows yet.</div>`;
       return;
     }
+    // 2026-05-12 EVE — three session counters for the stacked filter pounce
+    // candidate. (1) calc r1m verdict vs picker, (2) picker confidence (3-of-5
+    // vs ≥4-of-5), (3) stacked filter PASS/BLOCK (all three axes: window +
+    // calc MATCH + picker ≥4). Pounce target: if stacked PASS bucket holds
+    // >50% WR and net-positive PnL across 5-13 and 5-14, promote to real
+    // entry filter (window already enforced as of 5-13).
+    let cnt = { match: 0, match_win: 0, match_pnl: 0,
+                opp:   0, opp_win:   0, opp_pnl:   0,
+                none:  0, none_win:  0, none_pnl:  0,
+                pickerHi: 0, pickerHi_win: 0, pickerHi_pnl: 0, pickerHi_hs: 0,
+                pickerLo: 0, pickerLo_win: 0, pickerLo_pnl: 0, pickerLo_hs: 0,
+                stackPass: 0, stackPass_win: 0, stackPass_pnl: 0, stackPass_hs: 0,
+                stackBlock: 0, stackBlock_win: 0, stackBlock_pnl: 0, stackBlock_hs: 0 };
+    for (const t of trades) {
+      const b = t.breakdown || {};
+      const tag = b.calc_r1m_vs_picker || "NONE";
+      const pnl = Number(t.pnl_pct);
+      const win = Number.isFinite(pnl) && pnl >= 10 ? 1 : 0;
+      const hs  = Number.isFinite(pnl) && pnl <= -14 ? 1 : 0;
+      const safePnl = Number.isFinite(pnl) ? pnl : 0;
+      // axis 1: calc r1m
+      if (tag === "MATCH") { cnt.match++; cnt.match_win += win; cnt.match_pnl += safePnl; }
+      else if (tag === "OPPOSITE") { cnt.opp++; cnt.opp_win += win; cnt.opp_pnl += safePnl; }
+      else { cnt.none++; cnt.none_win += win; cnt.none_pnl += safePnl; }
+      // axis 2: picker confidence
+      const pc = b.picker_conf;
+      if (pc != null && pc >= 4) { cnt.pickerHi++; cnt.pickerHi_win += win; cnt.pickerHi_pnl += safePnl; cnt.pickerHi_hs += hs; }
+      else { cnt.pickerLo++; cnt.pickerLo_win += win; cnt.pickerLo_pnl += safePnl; cnt.pickerLo_hs += hs; }
+      // axis 3: stacked filter
+      if (b.stacked_pass) { cnt.stackPass++; cnt.stackPass_win += win; cnt.stackPass_pnl += safePnl; cnt.stackPass_hs += hs; }
+      else { cnt.stackBlock++; cnt.stackBlock_win += win; cnt.stackBlock_pnl += safePnl; cnt.stackBlock_hs += hs; }
+    }
+    const wr = (w, n) => n ? `${Math.round(w/n*100)}%` : "—";
+    const sign = (v) => (v>=0?'+':'') + v.toFixed(1) + '%';
+    const calcSummary = `
+      <span class="calc-MATCH">MATCH: ${cnt.match} (${wr(cnt.match_win,cnt.match)} WR, ${sign(cnt.match_pnl)})</span> ·
+      <span class="calc-OPPOSITE">OPPOSITE: ${cnt.opp} (${wr(cnt.opp_win,cnt.opp)} WR, ${sign(cnt.opp_pnl)})</span> ·
+      <span class="calc-NONE">NONE: ${cnt.none} (${wr(cnt.none_win,cnt.none)} WR, ${sign(cnt.none_pnl)})</span>
+    `;
+    const pickerSummary = `
+      <span class="picker-high">≥4-of-5: ${cnt.pickerHi} (${wr(cnt.pickerHi_win,cnt.pickerHi)} WR, ${cnt.pickerHi_hs} HS, ${sign(cnt.pickerHi_pnl)})</span> ·
+      <span class="picker-low">3-of-5 only: ${cnt.pickerLo} (${wr(cnt.pickerLo_win,cnt.pickerLo)} WR, ${cnt.pickerLo_hs} HS, ${sign(cnt.pickerLo_pnl)})</span>
+    `;
+    const stackSummary = `
+      <span class="calc-MATCH">PASS ★: ${cnt.stackPass} (${wr(cnt.stackPass_win,cnt.stackPass)} WR, ${cnt.stackPass_hs} HS, ${sign(cnt.stackPass_pnl)})</span> ·
+      <span class="calc-NONE">BLOCK: ${cnt.stackBlock} (${wr(cnt.stackBlock_win,cnt.stackBlock)} WR, ${cnt.stackBlock_hs} HS, ${sign(cnt.stackBlock_pnl)})</span>
+    `;
+
     const rows = trades.map(t => {
       const b = t.breakdown;
       const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
       const pnlCls = fmtPctCls(t.pnl_pct);
       const vr = (k) => `<td class="num ${ratioCls(b[k])}">${b[k] == null ? "—" : Number(b[k]).toFixed(2)}</td>`;
       const ab = (k) => `<td class="num">${fmtNum(b[k], 3)}</td>`;
-      return `<tr>
+      // 2026-05-09 EVE-3 — m_at_entry column. Colored same scheme as live-m
+      // pill: < 0.85 yellow (chop), 0.85-1.15 default, > 1.15 green (trend).
+      const m = b.m_at_entry;
+      const mCls = m == null ? "dim-num" : m < 0.85 ? "yellow" : m > 1.15 ? "green" : "";
+      const mCell = `<td class="num ${mCls}">${m == null ? "—" : m.toFixed(2)}</td>`;
+      // 2026-05-12 EVE — r1m calculus verdict cell. Watch list: green MATCH,
+      // red OPPOSITE (block candidate), dim NONE.
+      const cv = b.calc_r1m_verdict || "—";
+      const cTag = b.calc_r1m_vs_picker || "NONE";
+      const calcCell = `<td class="calc-${cTag}" title="r²=${b.quad_r2_r1m ?? '—'} curv=${b.quad_curvature_r1m ?? '—'}">${cv}</td>`;
+      // 2026-05-12 EVE — stacked filter row highlight. PASS = green tint +
+      // ★ marker. Visual scan target — these are the trades the stacked
+      // filter would have kept.
+      const rowCls = b.stacked_pass ? "stacked-pass" : "";
+      const starCell = `<td class="star">${b.stacked_pass ? "★" : ""}</td>`;
+      return `<tr class="${rowCls}">
+        ${starCell}
         <td>${fmtTime(t.entry_time_iso)}</td>
         <td><strong class="${sideClass}">${t.side || t.direction || ""}</strong></td>
         <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
+        ${mCell}
         ${vr("vol_ratio_1m")}${vr("vol_ratio_3m")}${vr("vol_ratio_6m")}${vr("vol_ratio_9m")}${vr("vol_ratio_12m")}
         ${ab("abs_1m")}${ab("abs_3m")}${ab("abs_6m")}${ab("abs_9m")}${ab("abs_12m")}
         ${verdictCell(b.d2_v1)}${verdictCell(b.d2_v3)}${verdictCell(b.d2_v6)}${verdictCell(b.d2_v9)}${verdictCell(b.d2_v12)}
         ${countCell(b.d2_call_count)}
         ${countCell(b.d2_put_count)}
         ${verdictCell(b.d2_direction)}
+        ${calcCell}
       </tr>`;
     }).join("");
     $("breakdown-wrap").innerHTML = `
       <div class="tiny" style="margin-bottom:6px">
-        DIR2X2: 5 voters (1m/3m/6m/9m/12m) · needs ≥3 of 5 to fire ·
-        Abs gate: ≥2 of {1,3,6,9,12}m in [0.55, 0.95] band ·
-        Vol gate: r12m ≥ 1.03
+        DIR2X2: 5 voters (1m/3m/6m/9m/12m), 4-of-5 strict combiner ·
+        K_LOW abstain (1m=0.45, 3m=0.35, 6m=0.40, 9m=0.50, 12m=0.40 × today's avg range) ·
+        Vol voter: 1m=[0.30,1.20], 3m=[0.30,∞), 6m/9m/12m=[0.70,∞) × session avg · anchor=6m|9m, ≥2 of {1m,3m,12m} also vote ·
+        Abs bands: 1m/3m=[0.30,1.00], 6m/9m/12m=[0.50,1.00] · ceilings effectively removed 5-13 (picker IMB_K_HIGH handles exhaustion) ·
+        BUILD exits scaled by m = today_r1m_avg_range/0.27, clamped [0.75, 1.33]
+      </div>
+      <div class="watch-strip">
+        <strong>Stacked filter watch ★</strong> (window 09:03-13:59 + calc r1m MATCH + picker ≥4-of-5 — pounce candidate):
+        ${stackSummary}
+      </div>
+      <div class="watch-strip">
+        <strong>Calc r1m</strong> (parabola fit vs picker):
+        ${calcSummary}
+      </div>
+      <div class="watch-strip">
+        <strong>Picker confidence</strong> (same-direction vote count):
+        ${pickerSummary}
       </div>
       <table>
         <thead>
           <tr>
+            <th rowspan="2"></th>
             <th rowspan="2">Entry</th>
             <th rowspan="2">Side</th>
             <th rowspan="2" class="num">P&L</th>
+            <th rowspan="2" class="num">m</th>
             <th colspan="5" style="text-align:center">Vol Ratio (× sessavg)</th>
             <th colspan="5" style="text-align:center">Absorption Avg</th>
             <th colspan="5" style="text-align:center">DIR2X2 Verdict</th>
             <th rowspan="2" class="num">C</th>
             <th rowspan="2" class="num">P</th>
             <th rowspan="2">D2 Dir</th>
+            <th rowspan="2">Calc r1m</th>
           </tr>
           <tr>
             <th class="num">1m</th><th class="num">3m</th><th class="num">6m</th><th class="num">9m</th><th class="num">12m</th>
@@ -455,6 +548,20 @@
       $("regime-text").innerHTML = `R/ORB · <span class="${regimeClass(r)}">${r.toFixed(2)}</span>`;
     } else {
       $("regime-pill").style.display = "none";
+    }
+
+    // 2026-05-09 EVE-3 — live m multiplier pill. Shows what the BUILD exit
+    // ladder would scale by if a fire happened RIGHT NOW (clamped to
+    // [0.70, 1.50]). Color-coded: chop bias < 0.85 = yellow, normal band
+    // 0.85-1.15 = no color, trend bias > 1.15 = green.
+    const liveM = snap?.live_m;
+    if (liveM && liveM.m != null) {
+      $("m-pill").style.display = "";
+      const m = liveM.m;
+      const mCls = m < 0.85 ? "yellow" : m > 1.15 ? "green" : "";
+      $("m-text").innerHTML = `m · <span class="${mCls}">${m.toFixed(2)}</span>`;
+    } else {
+      $("m-pill").style.display = "none";
     }
 
     $("generated-at").textContent = `generated ${fmtTime(snap?.generated_at_iso)}`;
