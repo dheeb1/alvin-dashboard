@@ -174,6 +174,16 @@
   const fmtPct = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%");
   const fmtPctCls = (v) => v == null ? "" : v > 0 ? "green" : v < 0 ? "red" : "";
   const fmtPrice = (v) => v == null ? "—" : "$" + Number(v).toFixed(2);
+  // 2026-05-15 — dollar P&L. Signed with no cents on totals; cents kept on
+  // per-trade rows so small tape-mid wiggles ($0.50 type) don't round to zero.
+  const fmtDollars = (v, cents = true) => {
+    if (v == null) return "—";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    const sign = n > 0 ? "+" : n < 0 ? "-" : "";
+    const abs = Math.abs(n);
+    return sign + "$" + (cents ? abs.toFixed(2) : Math.round(abs).toString());
+  };
   const fmtTime = (iso) => {
     if (!iso) return "—";
     try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }); }
@@ -205,14 +215,21 @@
     const s = snap.stats_today || {};
     const sumCls = s.sum_pnl_pct > 0 ? "green" : s.sum_pnl_pct < 0 ? "red" : "";
     const wrCls = s.win_rate_pct >= 60 ? "green" : s.win_rate_pct < 50 ? "red" : "";
+    // 2026-05-15 — $ P&L wired in. Day P&L card swaps to dollars-first
+    // (the number David actually cares about) with % as the subtitle; the
+    // other four cards keep % as the headline and append $ underneath.
     const cards = [
-      { label: "Day P&L", value: fmtPct(s.sum_pnl_pct), cls: sumCls,
-        sub: `${s.wins}W · ${s.losses}L · ${s.trades_today} trades` },
+      { label: "Day P&L", value: fmtDollars(s.sum_pnl_dollars, false), cls: sumCls,
+        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades` },
       { label: "Win Rate", value: (s.win_rate_pct || 0).toFixed(0) + "%", cls: wrCls },
-      { label: "Avg Win", value: fmtPct(s.avg_win_pct), cls: "green" },
-      { label: "Avg Loss", value: fmtPct(s.avg_loss_pct), cls: "red" },
-      { label: "Best", value: fmtPct(s.best_pct), cls: "green" },
-      { label: "Worst", value: fmtPct(s.worst_pct), cls: "red" },
+      { label: "Avg Win", value: fmtPct(s.avg_win_pct), cls: "green",
+        sub: fmtDollars(s.avg_win_dollars) },
+      { label: "Avg Loss", value: fmtPct(s.avg_loss_pct), cls: "red",
+        sub: fmtDollars(s.avg_loss_dollars) },
+      { label: "Best", value: fmtPct(s.best_pct), cls: "green",
+        sub: fmtDollars(s.best_dollars) },
+      { label: "Worst", value: fmtPct(s.worst_pct), cls: "red",
+        sub: fmtDollars(s.worst_dollars) },
     ];
     $("stat-grid").innerHTML = cards.map(c =>
       `<div class="card">
@@ -239,6 +256,7 @@
         <td class="num">${fmtPrice(p.entry_price)}</td>
         <td class="num">${fmtPrice(p.last_price)}</td>
         <td class="num ${pnlCls}">${fmtPct(p.unrealized_pnl_pct)}</td>
+        <td class="num ${pnlCls}">${fmtDollars(p.unrealized_pnl_dollars)}</td>
         <td class="num">${fmtPrice(p.high_price)}</td>
         <td class="num">${fmtDur(p.hold_sec)}</td>
       </tr>`;
@@ -248,7 +266,8 @@
         <thead><tr>
           <th>Opened</th><th>Contract</th>
           <th class="num">Entry $</th><th class="num">Last $</th>
-          <th class="num">Unrealized</th><th class="num">Peak $</th>
+          <th class="num">Unreal %</th><th class="num">Unreal $</th>
+          <th class="num">Peak $</th>
           <th class="num">Held</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -278,6 +297,7 @@
         <td class="num">${fmtPrice(t.entry_price)}</td>
         <td class="num">${fmtPrice(t.exit_price)}</td>
         <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
+        <td class="num ${pnlCls}">${fmtDollars(t.pnl_dollars)}</td>
         <td class="num green">${fmtPct(t.mfe_pct)}</td>
         <td class="num red">${fmtPct(t.mae_pct)}</td>
         <td class="num">${fmtDur(t.hold_sec)}</td>
@@ -292,7 +312,8 @@
         <thead><tr>
           <th>Entry</th><th>Exit</th><th>Contract</th>
           <th class="num">Entry $</th><th class="num">Exit $</th>
-          <th class="num">P&L</th><th class="num">MFE</th><th class="num">MAE</th>
+          <th class="num">P&L %</th><th class="num">P&L $</th>
+          <th class="num">MFE</th><th class="num">MAE</th>
           <th class="num">Held</th>
           <th class="num">s3</th><th class="num">s6</th><th class="num">s9</th>
           <th>Reason</th>
