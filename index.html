@@ -215,13 +215,20 @@
     const s = snap.stats_today || {};
     const sumCls = s.sum_pnl_pct > 0 ? "green" : s.sum_pnl_pct < 0 ? "red" : "";
     const wrCls = s.win_rate_pct >= 60 ? "green" : s.win_rate_pct < 50 ? "red" : "";
-    // 2026-05-15 — $ P&L wired in. Day P&L card swaps to dollars-first
-    // (the number David actually cares about) with % as the subtitle; the
-    // other four cards keep % as the headline and append $ underneath.
+    // 2026-05-15 — $ P&L wired in (NET of commission). Day P&L card leads
+    // with the real-money net; subtitle shows gross / commission / W-L so the
+    // math is auditable. Avg Win / Loss / Best / Worst show $ underneath %
+    // (also NET — winners shrink by $1.60, losers grow by $1.60 vs gross).
+    const grossSub = (s.sum_pnl_dollars_gross != null && s.commission_total_dollars != null)
+      ? ` (gross ${fmtDollars(s.sum_pnl_dollars_gross, false)} − ${fmtDollars(s.commission_total_dollars, false).replace("-","").replace("+","")} comm)`
+      : "";
     const cards = [
-      { label: "Day P&L", value: fmtDollars(s.sum_pnl_dollars, false), cls: sumCls,
-        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades` },
+      { label: "Day P&L (net)", value: fmtDollars(s.sum_pnl_dollars, false), cls: sumCls,
+        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades${grossSub}` },
       { label: "Win Rate", value: (s.win_rate_pct || 0).toFixed(0) + "%", cls: wrCls },
+      { label: "Commission", value: fmtDollars(s.commission_total_dollars ? -Math.abs(s.commission_total_dollars) : 0, false),
+        cls: "yellow",
+        sub: `${s.trades_today || 0} trades × round-trip` },
       { label: "Avg Win", value: fmtPct(s.avg_win_pct), cls: "green",
         sub: fmtDollars(s.avg_win_dollars) },
       { label: "Avg Loss", value: fmtPct(s.avg_loss_pct), cls: "red",
