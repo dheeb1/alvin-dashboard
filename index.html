@@ -404,7 +404,7 @@
       ${n_other ? ` · <span class="dim-num">Other routes: ${n_other} (${wr(w_other,n_other)} WR, ${sign(pnl_other)})</span>` : ""}
     `;
 
-    const threshold = (snap.live_iva && snap.live_iva.threshold) || 12;
+    const threshold = (snap.live_iva && snap.live_iva.threshold) || 10;
     const rows = trades.map(t => {
       const b = t.breakdown || {};
       const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
@@ -430,11 +430,12 @@
     }).join("");
     $("breakdown-wrap").innerHTML = `
       <div class="tiny" style="margin-bottom:6px">
-        IVA = sumImb × sumVol / sumAbs (gate threshold ${threshold}) ·
-        1v1Tick = buy_1m − sell_1m (per-tick directional pressure) ·
-        r1m/r3m/r6m = rolling sums of 1v1Tick over ~60s / ~170s / ~342s ·
-        Entry = IVA ≥ ${threshold} AND all three r1m/r3m/r6m agree on sign ·
-        Exit = all three flip against the position
+        IVA_1m = imb_1m × (vol_1m / session_avg) / abs_1m (gate threshold ${threshold}) ·
+        tick_net = BUY-size − SELL-size from tape_trades (Lee-Ready per-print) ·
+        r60/r180/r360 = trailing 60s / 180s / 360s sums of tick_net ·
+        Entry = IVA ≥ ${threshold} AND all three r60/r180/r360 agree on sign;
+        abs_1m ≥ 0.70 → RIDE the winning side, abs_1m &lt; 0.70 → FADE ·
+        RIDE exit = all three flip against the position; FADE exit = position_manager P&L profile
       </div>
       <div class="watch-strip">
         <strong>Today by route</strong>: ${summary}
@@ -453,9 +454,9 @@
             <th class="num">buy_1m</th>
             <th class="num">sell_1m</th>
             <th class="num">1v1Tick</th>
-            <th class="num">r1m</th>
-            <th class="num">r3m</th>
-            <th class="num">r6m</th>
+            <th class="num">r60</th>
+            <th class="num">r180</th>
+            <th class="num">r360</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -533,31 +534,43 @@
     $("mode-text").textContent = mt;
     $("mode-text").className = mc;
 
-    // 2026-05-18 PM — IVA+1v1 live pill. Replaces the old s27 streak pill
-    // and m pill (oracle retired, BUILD ladder bypassed). Shows the live
-    // gate score + the three rolling consensus sums + side state. Hidden
-    // when iva_state.json is missing or stale.
+    // 2026-05-19 — IVA_ABS live pill (replaces IVA+1v1 which was retired).
+    // Reads iva_abs_state.json via publisher.load_live_iva → state.live_iva.
+    // Shows: IVA score, abs_1m, the three rolling consensus sums
+    // (60s/180s/360s, all from tape_trades — matches the dashboard CSV),
+    // clean_window verdict (buyers/sellers/mixed), side + entry_type.
     const iva = snap?.live_iva;
     if (iva && iva.iva_last != null) {
       $("iva-pill").style.display = "";
       const score = Number(iva.iva_last);
-      const thr = iva.threshold || 12;
-      const scoreCls = score >= thr ? "red" : score >= 6 ? "yellow" : "";
-      const armed = iva.safety_off ? '<span class="red">★armed</span>' : '<span class="dim-num">cold</span>';
-      const sideTxt = iva.side ? `<strong class="side-${iva.side}">${iva.side}</strong>` : '<span class="dim-num">FLAT</span>';
-      const r1 = Number(iva.r1m || 0);
-      const r3 = Number(iva.r3m || 0);
-      const r6 = Number(iva.r6m || 0);
-      const c1 = r1 > 0 ? "green" : r1 < 0 ? "red" : "dim-num";
-      const c3 = r3 > 0 ? "green" : r3 < 0 ? "red" : "dim-num";
-      const c6 = r6 > 0 ? "green" : r6 < 0 ? "red" : "dim-num";
+      const thr = iva.threshold || 10;
+      const scoreCls = score >= thr ? "red" : score >= thr * 0.6 ? "yellow" : "";
+      const absCutoff = iva.abs_cutoff || 0.70;
+      const abs1 = iva.abs1_last;
+      const absCls = abs1 == null ? "dim-num" : (abs1 >= absCutoff ? "green" : "red");
+      const absTxt = abs1 == null ? "—" :
+        `<span class="${absCls}">abs ${Number(abs1).toFixed(2)}${abs1 >= absCutoff ? " RIDE" : " FADE"}</span>`;
+      const r60  = Number(iva.r60  || 0);
+      const r180 = Number(iva.r180 || 0);
+      const r360 = Number(iva.r360 || 0);
+      const c60  = r60  > 0 ? "green" : r60  < 0 ? "red" : "dim-num";
+      const c180 = r180 > 0 ? "green" : r180 < 0 ? "red" : "dim-num";
+      const c360 = r360 > 0 ? "green" : r360 < 0 ? "red" : "dim-num";
+      const cw = iva.clean_window;
+      const cwTxt = cw === "buyers"  ? '<span class="green"><strong>BUYERS</strong></span>'
+                  : cw === "sellers" ? '<span class="red"><strong>SELLERS</strong></span>'
+                  : '<span class="dim-num">mixed</span>';
+      const sideTxt = iva.side
+        ? `<strong class="side-${iva.side}">${iva.side}${iva.entry_type ? " " + iva.entry_type : ""}</strong>`
+        : '<span class="dim-num">FLAT</span>';
       const k = (n) => Math.abs(n) >= 1000 ? (n/1000).toFixed(1) + "k" : Math.round(n).toString();
       const sign = (n) => n > 0 ? "+" : n < 0 ? "−" : "";
       $("iva-text").innerHTML =
-        `IVA <span class="${scoreCls}"><strong>${score.toFixed(2)}</strong></span> ${armed} · ` +
-        `<span class="${c1}">${sign(r1)}${k(Math.abs(r1))}</span>/` +
-        `<span class="${c3}">${sign(r3)}${k(Math.abs(r3))}</span>/` +
-        `<span class="${c6}">${sign(r6)}${k(Math.abs(r6))}</span> · ${sideTxt}`;
+        `IVA <span class="${scoreCls}"><strong>${score.toFixed(2)}</strong></span> · ` +
+        `${absTxt} · ` +
+        `<span class="${c60}">${sign(r60)}${k(Math.abs(r60))}</span>/` +
+        `<span class="${c180}">${sign(r180)}${k(Math.abs(r180))}</span>/` +
+        `<span class="${c360}">${sign(r360)}${k(Math.abs(r360))}</span> ${cwTxt} · ${sideTxt}`;
     } else {
       $("iva-pill").style.display = "none";
     }
