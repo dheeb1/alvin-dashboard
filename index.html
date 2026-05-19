@@ -133,7 +133,10 @@
 <section>
   <div class="section-head">
     <h2>Trades Today</h2>
-    <button class="btn" id="csv-btn" disabled>Download CSV</button>
+    <div>
+      <button class="btn" id="csv-btn" disabled>Download CSV</button>
+      <a class="btn" id="tape-csv-btn" download="tick_tape_today.csv" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
+    </div>
   </div>
   <div id="trades-wrap">
     <div class="empty">loading…</div>
@@ -158,6 +161,14 @@
   // Format: https://gist.githubusercontent.com/<USER>/<GIST_ID>/raw/state.json
   const GIST_RAW_URL = "https://gist.githubusercontent.com/dheeb1/ccd47f542b8de6a2b03ee7c4cd6d0202/raw/state.json";
   const LOCAL_URL = "data/state.json";
+  // 2026-05-18 PM — per-tick tape CSV lives in the same gist, separate file.
+  // Publisher pushes both alongside each cycle.
+  // 2026-05-19 — CSV expanded from 15 → 25 cols: added imb_3m/abs_3m/vol_3m,
+  // 1m+3m sums, sum-bursts, and renamed IVA_burst → IVA_1m (was always a
+  // level not a burst) plus new IVA_sum. Data-collection only — bot still
+  // trades on IVA_ABS gate; sum cols are smoothing experiments for later.
+  const GIST_TAPE_CSV_URL = GIST_RAW_URL.replace(/\/raw\/state\.json.*$/, "/raw/tick_tape_today.csv");
+  const LOCAL_TAPE_CSV_URL = "data/tick_tape_today.csv";
   const REFRESH_MS = 10_000;
 
   // ?src=local → load from data/state.json (publisher writes one locally),
@@ -168,6 +179,11 @@
     if (p === "local") return LOCAL_URL;
     if (p === "sample") return "sample_data.json";
     return GIST_RAW_URL.includes("REPLACE_WITH") ? "sample_data.json" : GIST_RAW_URL;
+  }
+  function tapeCsvUrl() {
+    const p = new URLSearchParams(location.search).get("src");
+    if (p === "local") return LOCAL_TAPE_CSV_URL;
+    return GIST_TAPE_CSV_URL;
   }
 
   // -------- Helpers --------
@@ -582,6 +598,13 @@
     }
   }
   $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
+  // 2026-05-18 PM — tape CSV button: point to gist raw URL (or local mirror).
+  // Cache-buster on the href so a fresh click always pulls the latest CSV.
+  $("tape-csv-btn").addEventListener("click", () => {
+    const base = tapeCsvUrl();
+    $("tape-csv-btn").href = base + (base.includes("?") ? "&" : "?") + "_=" + Date.now();
+  });
+  $("tape-csv-btn").href = tapeCsvUrl();
   tick();
   setInterval(tick, REFRESH_MS);
 </script>
