@@ -135,7 +135,7 @@
     <h2>Trades Today</h2>
     <div>
       <button class="btn" id="csv-btn" disabled>Download CSV</button>
-      <a class="btn" id="tape-csv-btn" download="tick_tape_today.csv" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
+      <a class="btn" id="tape-csv-btn" href="#" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
     </div>
   </div>
   <div id="trades-wrap">
@@ -598,13 +598,36 @@
     }
   }
   $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
-  // 2026-05-18 PM — tape CSV button: point to gist raw URL (or local mirror).
-  // Cache-buster on the href so a fresh click always pulls the latest CSV.
-  $("tape-csv-btn").addEventListener("click", () => {
+  // 2026-05-19 — tape CSV button: blob-download to force save. The HTML
+  // download attr is ignored cross-origin (gist is a different origin than
+  // GitHub Pages), so anchor-with-href just rendered the CSV inline. Fetch
+  // the file, wrap in a Blob (same-origin), trigger a temp anchor click,
+  // revoke the object URL. Works against both gist and local mirror.
+  $("tape-csv-btn").addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    const btn = $("tape-csv-btn");
+    const original = btn.textContent;
     const base = tapeCsvUrl();
-    $("tape-csv-btn").href = base + (base.includes("?") ? "&" : "?") + "_=" + Date.now();
+    const url = base + (base.includes("?") ? "&" : "?") + "_=" + Date.now();
+    btn.textContent = "Downloading...";
+    try {
+      const resp = await fetch(url, { cache: "no-store" });
+      if (!resp.ok) throw new Error("HTTP " + resp.status);
+      const blob = await resp.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objUrl;
+      a.download = "tick_tape_today.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objUrl);
+      btn.textContent = original;
+    } catch (e) {
+      btn.textContent = "Error: " + e.message;
+      setTimeout(() => { btn.textContent = original; }, 4000);
+    }
   });
-  $("tape-csv-btn").href = tapeCsvUrl();
   tick();
   setInterval(tick, REFRESH_MS);
 </script>
