@@ -110,9 +110,9 @@
   <div class="row">
     <span class="pill" id="mode-pill"><span class="dot"></span><span id="mode-text">…</span></span>
     <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></span>
-    <!-- 2026-05-18 PM — streak-pill (oracle) and m-pill (BUILD ladder) retired.
-         iva-pill replaces them as the primary live-state indicator. -->
-    <span class="pill" id="iva-pill" style="display:none"><span id="iva-text">—</span></span>
+    <!-- 2026-05-20 — AVI pill replaces the IVA pill. Shows A / V / |I| with
+         armed/fired state per rule (TREND, FADE). -->
+    <span class="pill" id="avi-pill" style="display:none"><span id="avi-text">—</span></span>
     <span class="pill" id="regime-pill" style="display:none"><span id="regime-text">—</span></span>
     <span class="pill"><span id="last-update">—</span></span>
   </div>
@@ -139,13 +139,6 @@
     </div>
   </div>
   <div id="trades-wrap">
-    <div class="empty">loading…</div>
-  </div>
-</section>
-
-<section>
-  <h2>Trade Breakdown · IVA + 1v1 inputs at entry</h2>
-  <div id="breakdown-wrap" class="scroll-x">
     <div class="empty">loading…</div>
   </div>
 </section>
@@ -304,9 +297,7 @@
   }
 
   function renderTrades(snap) {
-    // 2026-05-18 PM — oracle (s6/s12/s27) columns removed. Trade Route shown
-    // instead so IVA_1V1 trades are visually distinguishable from any legacy
-    // BUILD / SCALP / MANUAL trades still landing in the table.
+    // 2026-05-20 — Route column highlights AVI_TREND / AVI_FADE trades.
     const trades = snap.trades_today || [];
     if (!trades.length) {
       $("trades-wrap").innerHTML = `<div class="empty">No trades yet today.</div>`;
@@ -317,7 +308,8 @@
     const rows = trades.map(t => {
       const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
       const pnlCls = fmtPctCls(t.pnl_pct);
-      const routeCls = t.route === "IVA_1V1" ? "star" : "dim-num";
+      const isAvi = (t.route === "AVI_TREND" || t.route === "AVI_FADE");
+      const routeCls = isAvi ? "star" : "dim-num";
       return `<tr>
         <td>${fmtTime(t.entry_time_iso)}</td>
         <td>${fmtTime(t.exit_time_iso)}</td>
@@ -347,12 +339,10 @@
       </table>`;
   }
 
-  // -------- Breakdown table (IVA + 1v1 inputs at entry) --------
-  // 2026-05-18 PM rebuild — DIR2X2 breakdown replaced with the IVA+1v1 rule's
-  // inputs. Per trade we show: IVA score at entry (the gate), sumImb / sumAbs
-  // / sumVol (the gate components), buy_1m / sell_1m / 1v1Tick (the
-  // directional engine), and r1m / r3m / r6m at entry (the consensus state
-  // the trade was fired on). Wide-but-flat layout, color-coded by sign.
+  // -------- Breakdown table (AVI inputs at entry) --------
+  // 2026-05-20 — Per AVI trade we show: A / V / |I| at entry (the three filter
+  // values), direction source (imb_6m for TREND, INVERT_imb_1m for FADE),
+  // consensus_6_9_12 state, and PnL. Wide-but-flat, color-coded.
   function fmtInt(v) {
     if (v == null) return "—";
     const n = Number(v);
@@ -365,104 +355,6 @@
     const n = Number(v);
     return Number.isFinite(n) ? n.toFixed(dp) : "—";
   }
-  function signedCell(v, dp = 0) {
-    if (v == null) return `<td class="num dim-num">—</td>`;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return `<td class="num dim-num">—</td>`;
-    const cls = n > 0 ? "green" : n < 0 ? "red" : "dim-num";
-    return `<td class="num ${cls}">${dp === 0 ? fmtInt(n) : fmtFloat(n, dp)}</td>`;
-  }
-  function ivaCell(v, threshold) {
-    if (v == null) return `<td class="num dim-num">—</td>`;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return `<td class="num dim-num">—</td>`;
-    const cls = n >= (threshold || 12) ? "red" : n >= 6 ? "yellow" : "dim-num";
-    return `<td class="num ${cls}"><strong>${n.toFixed(2)}</strong></td>`;
-  }
-
-  function renderBreakdown(snap) {
-    const trades = (snap.trades_today || []).filter(t => t.breakdown);
-    if (!trades.length) {
-      $("breakdown-wrap").innerHTML = `<div class="empty">No breakdown rows yet.</div>`;
-      return;
-    }
-
-    // Session counters: IVA_1V1 trades vs other, WR + bp aggregates per route.
-    let n_iva = 0, w_iva = 0, pnl_iva = 0;
-    let n_other = 0, w_other = 0, pnl_other = 0;
-    for (const t of trades) {
-      const pnl = Number(t.pnl_pct);
-      const win = Number.isFinite(pnl) && pnl > 0 ? 1 : 0;
-      const safePnl = Number.isFinite(pnl) ? pnl : 0;
-      if (t.route === "IVA_1V1") { n_iva++; w_iva += win; pnl_iva += safePnl; }
-      else                       { n_other++; w_other += win; pnl_other += safePnl; }
-    }
-    const wr = (w, n) => n ? `${Math.round(w/n*100)}%` : "—";
-    const sign = (v) => (v>=0?'+':'') + v.toFixed(1) + '%';
-    const summary = `
-      <span class="star">IVA_1V1: ${n_iva} (${wr(w_iva,n_iva)} WR, ${sign(pnl_iva)})</span>
-      ${n_other ? ` · <span class="dim-num">Other routes: ${n_other} (${wr(w_other,n_other)} WR, ${sign(pnl_other)})</span>` : ""}
-    `;
-
-    const threshold = (snap.live_iva && snap.live_iva.threshold) || 10;
-    const rows = trades.map(t => {
-      const b = t.breakdown || {};
-      const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
-      const pnlCls = fmtPctCls(t.pnl_pct);
-      const routeCls = t.route === "IVA_1V1" ? "star" : "dim-num";
-      const star = t.route === "IVA_1V1" ? "★" : "";
-      return `<tr>
-        <td class="${routeCls}">${star}</td>
-        <td>${fmtTime(t.entry_time_iso)}</td>
-        <td><strong class="${sideClass}">${t.side || t.direction || ""}</strong></td>
-        <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
-        ${ivaCell(b.iva_score, threshold)}
-        <td class="num">${fmtFloat(b.sum_imb, 2)}</td>
-        <td class="num">${fmtFloat(b.sum_abs, 2)}</td>
-        <td class="num">${fmtFloat(b.sum_vol, 2)}</td>
-        <td class="num green">${fmtInt(b.buy_1m)}</td>
-        <td class="num red">${b.sell_1m == null ? "—" : "−" + Math.abs(Math.round(b.sell_1m)).toLocaleString()}</td>
-        ${signedCell(b.v1v_tick, 0)}
-        ${signedCell(b.iva_r1m, 0)}
-        ${signedCell(b.iva_r3m, 0)}
-        ${signedCell(b.iva_r6m, 0)}
-      </tr>`;
-    }).join("");
-    $("breakdown-wrap").innerHTML = `
-      <div class="tiny" style="margin-bottom:6px">
-        IVA_1m = imb_1m × (vol_1m / session_avg) / abs_1m (gate threshold ${threshold}) ·
-        tick_net = BUY-size − SELL-size from tape_trades (Lee-Ready per-print) ·
-        r60/r180/r360 = trailing 60s / 180s / 360s sums of tick_net ·
-        Entry = IVA ≥ ${threshold} AND all three r60/r180/r360 agree on sign;
-        abs_1m ≥ 0.70 → RIDE the winning side, abs_1m &lt; 0.70 → FADE ·
-        RIDE exit = all three flip against the position; FADE exit = position_manager P&L profile
-      </div>
-      <div class="watch-strip">
-        <strong>Today by route</strong>: ${summary}
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th>Entry</th>
-            <th>Side</th>
-            <th class="num">P&L</th>
-            <th class="num">IVA</th>
-            <th class="num">sumImb</th>
-            <th class="num">sumAbs</th>
-            <th class="num">sumVol</th>
-            <th class="num">buy_1m</th>
-            <th class="num">sell_1m</th>
-            <th class="num">1v1Tick</th>
-            <th class="num">r60</th>
-            <th class="num">r180</th>
-            <th class="num">r360</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
-
   // -------- CSV export --------
   // Flatten one trade (top-level + breakdown.*) into a single row dict
   function flattenTrade(t) {
@@ -534,45 +426,48 @@
     $("mode-text").textContent = mt;
     $("mode-text").className = mc;
 
-    // 2026-05-19 — IVA_ABS live pill (replaces IVA+1v1 which was retired).
-    // Reads iva_abs_state.json via publisher.load_live_iva → state.live_iva.
-    // Shows: IVA score, abs_1m, the three rolling consensus sums
-    // (60s/180s/360s, all from tape_trades — matches the dashboard CSV),
-    // clean_window verdict (buyers/sellers/mixed), side + entry_type.
-    const iva = snap?.live_iva;
-    if (iva && iva.iva_last != null) {
-      $("iva-pill").style.display = "";
-      const score = Number(iva.iva_last);
-      const thr = iva.threshold || 10;
-      const scoreCls = score >= thr ? "red" : score >= thr * 0.6 ? "yellow" : "";
-      const absCutoff = iva.abs_cutoff || 0.70;
-      const abs1 = iva.abs1_last;
-      const absCls = abs1 == null ? "dim-num" : (abs1 >= absCutoff ? "green" : "red");
-      const absTxt = abs1 == null ? "—" :
-        `<span class="${absCls}">abs ${Number(abs1).toFixed(2)}${abs1 >= absCutoff ? " RIDE" : " FADE"}</span>`;
-      const r60  = Number(iva.r60  || 0);
-      const r180 = Number(iva.r180 || 0);
-      const r360 = Number(iva.r360 || 0);
-      const c60  = r60  > 0 ? "green" : r60  < 0 ? "red" : "dim-num";
-      const c180 = r180 > 0 ? "green" : r180 < 0 ? "red" : "dim-num";
-      const c360 = r360 > 0 ? "green" : r360 < 0 ? "red" : "dim-num";
-      const cw = iva.clean_window;
-      const cwTxt = cw === "buyers"  ? '<span class="green"><strong>BUYERS</strong></span>'
-                  : cw === "sellers" ? '<span class="red"><strong>SELLERS</strong></span>'
-                  : '<span class="dim-num">mixed</span>';
-      const sideTxt = iva.side
-        ? `<strong class="side-${iva.side}">${iva.side}${iva.entry_type ? " " + iva.entry_type : ""}</strong>`
+    // 2026-05-20 — AVI live pill. Three-layer-stack trigger: A (r1m_abs_ratio)
+    // is the magnitude trigger, V (r1m_volume / session_avg) and |I|
+    // (r1m_imb_ratio) are filters, multi-TF imb-sign drives direction.
+    // Reads avi_state.json via publisher.load_live_avi → state.live_avi.
+    const avi = snap?.live_avi;
+    if (avi && avi.a_last != null) {
+      $("avi-pill").style.display = "";
+      const a   = Number(avi.a_last);
+      const v   = avi.v_last  != null ? Number(avi.v_last)  : null;
+      const im  = avi.i_last  != null ? Number(avi.i_last)  : null;
+      const aT  = avi.a_trend_threshold || 1.50;
+      const vT  = avi.v_trend_threshold || 1.11;
+      const aF  = avi.a_fade_threshold  || 1.95;
+      const iF  = avi.i_fade_threshold  || 1.17;
+      const aCls = a >= aF ? "red" : a >= aT ? "yellow" : "dim-num";
+      const vCls = v == null ? "dim-num" : v >= vT ? "green" : "dim-num";
+      const iCls = im == null ? "dim-num" : im >= iF ? "green" : "dim-num";
+      const imb1 = Number(avi.imb_sign_1m || 0);
+      const imb6 = Number(avi.imb_sign_6m || 0);
+      const imb12 = Number(avi.imb_sign_12m || 0);
+      const cons = Number(avi.consensus_6_9_12 || 0);
+      const sign = (n) => n > 0 ? "↑" : n < 0 ? "↓" : "·";
+      const cls = (n) => n > 0 ? "green" : n < 0 ? "red" : "dim-num";
+      const armedTxt = avi.fade_armed
+        ? '<strong class="red">FADE ARMED</strong>'
+        : (avi.trend_armed
+            ? '<strong class="green">TREND ARMED</strong>'
+            : '<span class="dim-num">idle</span>');
+      const sideTxt = avi.side
+        ? `<strong class="side-${avi.side}">${avi.side}${avi.entry_type ? " " + avi.entry_type : ""}</strong>`
         : '<span class="dim-num">FLAT</span>';
-      const k = (n) => Math.abs(n) >= 1000 ? (n/1000).toFixed(1) + "k" : Math.round(n).toString();
-      const sign = (n) => n > 0 ? "+" : n < 0 ? "−" : "";
-      $("iva-text").innerHTML =
-        `IVA <span class="${scoreCls}"><strong>${score.toFixed(2)}</strong></span> · ` +
-        `${absTxt} · ` +
-        `<span class="${c60}">${sign(r60)}${k(Math.abs(r60))}</span>/` +
-        `<span class="${c180}">${sign(r180)}${k(Math.abs(r180))}</span>/` +
-        `<span class="${c360}">${sign(r360)}${k(Math.abs(r360))}</span> ${cwTxt} · ${sideTxt}`;
+      $("avi-text").innerHTML =
+        `A <span class="${aCls}"><strong>${a.toFixed(2)}</strong></span> · ` +
+        `V <span class="${vCls}">${v == null ? "—" : v.toFixed(2)}</span> · ` +
+        `|I| <span class="${iCls}">${im == null ? "—" : im.toFixed(2)}</span> · ` +
+        `imb <span class="${cls(imb1)}">${sign(imb1)}1m</span>` +
+        `<span class="${cls(imb6)}">${sign(imb6)}6m</span>` +
+        `<span class="${cls(imb12)}">${sign(imb12)}12m</span> ` +
+        `cons<span class="${cls(cons)}">${sign(cons)}</span> · ` +
+        `${armedTxt} · ${sideTxt}`;
     } else {
-      $("iva-pill").style.display = "none";
+      $("avi-pill").style.display = "none";
     }
 
     // range/ORB regime pill — kept as observational context. Hide if no data.
@@ -602,7 +497,6 @@
       renderStats(snap);
       renderOpenPositions(snap);
       renderTrades(snap);
-      renderBreakdown(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
