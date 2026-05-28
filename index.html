@@ -341,8 +341,10 @@
 
   // -------- Breakdown table (AVI inputs at entry) --------
   // 2026-05-20 — Per AVI trade we show: A / V / |I| at entry (the three filter
-  // values), direction source (imb_6m for TREND, INVERT_imb_1m for FADE),
-  // consensus_6_9_12 state, and PnL. Wide-but-flat, color-coded.
+  // values), direction source ("imb_<flow_tf>" for TREND, INVERT_imb_1m for
+  // FADE), active-consensus state, and PnL. 2026-05-28 — lens-aware: under
+  // SHIFT (5_10_15) the AVI pill shows 1m/5m/15m + cons_5_10_15; under BASE
+  // (6_9_12) it shows 1m/6m/12m + cons_6_9_12.
   function fmtInt(v) {
     if (v == null) return "—";
     const n = Number(v);
@@ -444,9 +446,26 @@
       const vCls = v == null ? "dim-num" : v >= vT ? "green" : "dim-num";
       const iCls = im == null ? "dim-num" : im >= iF ? "green" : "dim-num";
       const imb1 = Number(avi.imb_sign_1m || 0);
-      const imb6 = Number(avi.imb_sign_6m || 0);
-      const imb12 = Number(avi.imb_sign_12m || 0);
-      const cons = Number(avi.consensus_6_9_12 || 0);
+      // 2026-05-28 — lens-aware AVI pill. flow_tf_label is "5m" or "6m". The
+      // pill shows the narrowest + widest legs of the active consensus stack
+      // (1m FADE direction + flow TF + 12m/15m widest) plus the active
+      // consensus sign.
+      const stack = avi.consensus_stack || "6_9_12";
+      const flowTf = avi.flow_tf_label || (stack === "5_10_15" ? "5m" : "6m");
+      const wideTf = stack === "5_10_15" ? "15m" : "12m";
+      const imbFlow = Number(
+        avi.imb_sign_active_flow != null
+          ? avi.imb_sign_active_flow
+          : (stack === "5_10_15" ? avi.imb_sign_5m : avi.imb_sign_6m) || 0
+      );
+      const imbWide = Number(
+        (stack === "5_10_15" ? avi.imb_sign_15m : avi.imb_sign_12m) || 0
+      );
+      const cons = Number(
+        avi.consensus_active != null
+          ? avi.consensus_active
+          : (stack === "5_10_15" ? avi.consensus_5_10_15 : avi.consensus_6_9_12) || 0
+      );
       const sign = (n) => n > 0 ? "↑" : n < 0 ? "↓" : "·";
       const cls = (n) => n > 0 ? "green" : n < 0 ? "red" : "dim-num";
       const armedTxt = avi.fade_armed
@@ -462,8 +481,8 @@
         `V <span class="${vCls}">${v == null ? "—" : v.toFixed(2)}</span> · ` +
         `|I| <span class="${iCls}">${im == null ? "—" : im.toFixed(2)}</span> · ` +
         `imb <span class="${cls(imb1)}">${sign(imb1)}1m</span>` +
-        `<span class="${cls(imb6)}">${sign(imb6)}6m</span>` +
-        `<span class="${cls(imb12)}">${sign(imb12)}12m</span> ` +
+        `<span class="${cls(imbFlow)}">${sign(imbFlow)}${flowTf}</span>` +
+        `<span class="${cls(imbWide)}">${sign(imbWide)}${wideTf}</span> ` +
         `cons<span class="${cls(cons)}">${sign(cons)}</span> · ` +
         `${armedTxt} · ${sideTxt}`;
     } else {
