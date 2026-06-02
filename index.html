@@ -143,6 +143,16 @@
   </div>
 </section>
 
+<!-- 2026-06-02 — TI Context (observation-only). MACD/VWAP/RSI/BB/ORB story-tag
+     at each fire. Falsifiable claim: does MIDDLE_NOISE/MIXED concentrate losers
+     vs TREND_WITH / REVERSAL_*? Hidden until the table has rows. -->
+<section id="ti-section" style="display:none">
+  <h2>TI Context · by story tag <span class="tiny" id="ti-total"></span></h2>
+  <div id="ti-tag-wrap"><div class="empty">—</div></div>
+  <h2 style="margin-top:18px">TI Context · today's fires</h2>
+  <div id="ti-today-wrap"><div class="empty">—</div></div>
+</section>
+
 <footer>
   <span id="generated-at">—</span> · auto-refresh every 10s ·
   <a href="?src=local" style="color:var(--dim)">local mode</a>
@@ -418,6 +428,60 @@
     return "";                     // normal band
   }
 
+  // -------- TI Context (observation-only story-tag tracking) --------
+  // 2026-06-02 — renders state.ti_context: per-story_tag outcome buckets
+  // (all-time) + today's individual fires with their TI labels. The suspected
+  // loser bucket (MIDDLE_NOISE / MIXED) is flagged yellow so the falsifiable
+  // claim is eyeballable. Section stays hidden until the table has rows.
+  function tagClass(tag) {
+    if (tag === "MIDDLE_NOISE" || tag === "MIXED") return "yellow";
+    if (tag === "TREND_WITH" || (tag || "").startsWith("REVERSAL")) return "green";
+    return "dim-num";
+  }
+  function winCls(w) { return w == null ? "" : w >= 60 ? "green" : w < 50 ? "red" : "yellow"; }
+
+  function renderTiContext(snap) {
+    const ti = snap.ti_context;
+    const section = $("ti-section");
+    if (!ti || !ti.total_fires) { section.style.display = "none"; return; }
+    section.style.display = "";
+    $("ti-total").textContent = `· ${ti.total_fires} fires all-time`;
+
+    // By-tag rollup
+    const tagRows = (ti.by_tag || []).map(b => `<tr>
+        <td><strong class="${tagClass(b.story_tag)}">${b.story_tag}</strong></td>
+        <td class="num">${b.fires}</td>
+        <td class="num">${b.closed}${b.open ? ` <span class="tiny">(+${b.open} open)</span>` : ""}</td>
+        <td class="num ${winCls(b.win_pct)}">${b.win_pct == null ? "—" : b.win_pct.toFixed(0) + "%"}</td>
+        <td class="num ${fmtPctCls(b.avg_pnl_pct)}">${b.avg_pnl_pct == null ? "—" : fmtPct(b.avg_pnl_pct)}</td>
+        <td class="num">${fmtDur(b.avg_hold_sec)}</td>
+      </tr>`).join("");
+    $("ti-tag-wrap").innerHTML = tagRows ? `<table>
+        <thead><tr><th>Story Tag</th><th class="num">Fires</th><th class="num">Closed</th>
+          <th class="num">Win%</th><th class="num">Avg P&L%</th><th class="num">Avg Hold</th></tr></thead>
+        <tbody>${tagRows}</tbody></table>` : `<div class="empty">No fires yet.</div>`;
+
+    // Today's fires
+    const todayRows = (ti.today || []).map(f => {
+      const sideCls = f.direction === "CALL" ? "side-CALL" : f.direction === "PUT" ? "side-PUT" : "";
+      return `<tr>
+        <td>${fmtTime(f.ts_iso)}</td>
+        <td class="dim-num">${f.trigger_type || "—"}</td>
+        <td><strong class="${sideCls}">${f.direction || "—"}</strong></td>
+        <td><strong class="${tagClass(f.story_tag)}">${f.story_tag || "—"}</strong>${f.snapshot_error ? ' <span class="red tiny">err</span>' : ""}</td>
+        <td class="tiny">${f.vwap_zone || "—"}</td>
+        <td class="tiny">${f.rsi_zone || "—"}</td>
+        <td class="tiny">${f.macd_hist_zone || "—"}</td>
+        <td class="tiny">${f.bb_zone || "—"}</td>
+        <td class="num ${fmtPctCls(f.pnl_pct)}">${f.pnl_pct == null ? '<span class="tiny">open</span>' : fmtPct(f.pnl_pct)}</td>
+      </tr>`;
+    }).join("");
+    $("ti-today-wrap").innerHTML = todayRows ? `<div class="scroll-x"><table>
+        <thead><tr><th>Time</th><th>Trigger</th><th>Dir</th><th>Story</th>
+          <th>VWAP zone</th><th>RSI</th><th>MACD hist</th><th>BB</th><th class="num">P&L%</th></tr></thead>
+        <tbody>${todayRows}</tbody></table></div>` : `<div class="empty">No fires today.</div>`;
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -516,6 +580,7 @@
       renderStats(snap);
       renderOpenPositions(snap);
       renderTrades(snap);
+      renderTiContext(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {

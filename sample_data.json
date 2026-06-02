@@ -3,18 +3,35 @@
   "session_date": "2026-05-02",
   "bot": {
     "running": true,
-    "live_trade_types": ["BRAIN_STACK"],
+    "live_trade_types": [
+      "BRAIN_STACK"
+    ],
     "paper_full_session_types": [],
-    "trading_windows": [{"start_time": "0930", "end_time": "1000"}],
+    "trading_windows": [
+      {
+        "start_time": "0930",
+        "end_time": "1000"
+      }
+    ],
     "last_heartbeat_iso": "2026-05-02T10:14:30-05:00",
     "seconds_since_heartbeat": 2
   },
   "open_positions": [
     {
-      "trade_id": 1116, "symbol": "QQQ 260502C679", "underlying": "QQQ", "side": "CALL", "strike": 679, "expiry": "2026-05-02",
-      "direction": "CALL", "entry_price": 1.10, "last_price": 1.24, "high_price": 1.31, "low_price": 1.08,
+      "trade_id": 1116,
+      "symbol": "QQQ 260502C679",
+      "underlying": "QQQ",
+      "side": "CALL",
+      "strike": 679,
+      "expiry": "2026-05-02",
+      "direction": "CALL",
+      "entry_price": 1.1,
+      "last_price": 1.24,
+      "high_price": 1.31,
+      "low_price": 1.08,
       "unrealized_pnl_pct": 12.73,
-      "entry_time_iso": "2026-05-02T10:11:08-05:00", "last_update_iso": "2026-05-02T10:14:30-05:00",
+      "entry_time_iso": "2026-05-02T10:11:08-05:00",
+      "last_update_iso": "2026-05-02T10:14:30-05:00",
       "hold_sec": 204
     }
   ],
@@ -31,40 +48,194 @@
   },
   "trades_today": [
     {
-      "trade_id": 1115, "symbol": "QQQ 260502C676", "underlying": "QQQ", "side": "CALL", "strike": 676, "expiry": "2026-05-02",
-      "direction": "CALL", "entry_price": 1.85, "exit_price": 2.26, "pnl_pct": 22.16, "mfe_pct": 24.0, "mae_pct": -2.1,
-      "exit_reason": "floor_22", "hold_sec": 412,
-      "entry_time_iso": "2026-05-02T08:34:12-05:00", "exit_time_iso": "2026-05-02T08:41:04-05:00"
+      "trade_id": 1115,
+      "symbol": "QQQ 260502C676",
+      "underlying": "QQQ",
+      "side": "CALL",
+      "strike": 676,
+      "expiry": "2026-05-02",
+      "direction": "CALL",
+      "entry_price": 1.85,
+      "exit_price": 2.26,
+      "pnl_pct": 22.16,
+      "mfe_pct": 24.0,
+      "mae_pct": -2.1,
+      "exit_reason": "floor_22",
+      "hold_sec": 412,
+      "entry_time_iso": "2026-05-02T08:34:12-05:00",
+      "exit_time_iso": "2026-05-02T08:41:04-05:00"
     },
     {
-      "trade_id": 1114, "symbol": "QQQ 260502P672", "underlying": "QQQ", "side": "PUT", "strike": 672, "expiry": "2026-05-02",
-      "direction": "PUT", "entry_price": 1.30, "exit_price": 1.18, "pnl_pct": -9.23, "mfe_pct": 3.8, "mae_pct": -10.1,
-      "exit_reason": "hard_stop_-9.2%_stop=9.1%", "hold_sec": 88,
-      "entry_time_iso": "2026-05-02T08:48:55-05:00", "exit_time_iso": "2026-05-02T08:50:23-05:00"
+      "trade_id": 1114,
+      "symbol": "QQQ 260502P672",
+      "underlying": "QQQ",
+      "side": "PUT",
+      "strike": 672,
+      "expiry": "2026-05-02",
+      "direction": "PUT",
+      "entry_price": 1.3,
+      "exit_price": 1.18,
+      "pnl_pct": -9.23,
+      "mfe_pct": 3.8,
+      "mae_pct": -10.1,
+      "exit_reason": "hard_stop_-9.2%_stop=9.1%",
+      "hold_sec": 88,
+      "entry_time_iso": "2026-05-02T08:48:55-05:00",
+      "exit_time_iso": "2026-05-02T08:50:23-05:00"
     },
     {
-      "trade_id": 1113, "symbol": "QQQ 260502C677", "underlying": "QQQ", "side": "CALL", "strike": 677, "expiry": "2026-05-02",
-      "direction": "CALL", "entry_price": 1.42, "exit_price": 1.61, "pnl_pct": 13.38, "mfe_pct": 15.5, "mae_pct": -1.0,
-      "exit_reason": "floor_12", "hold_sec": 215,
-      "entry_time_iso": "2026-05-02T09:12:18-05:00", "exit_time_iso": "2026-05-02T09:15:53-05:00"
+      "trade_id": 1113,
+      "symbol": "QQQ 260502C677",
+      "underlying": "QQQ",
+      "side": "CALL",
+      "strike": 677,
+      "expiry": "2026-05-02",
+      "direction": "CALL",
+      "entry_price": 1.42,
+      "exit_price": 1.61,
+      "pnl_pct": 13.38,
+      "mfe_pct": 15.5,
+      "mae_pct": -1.0,
+      "exit_reason": "floor_12",
+      "hold_sec": 215,
+      "entry_time_iso": "2026-05-02T09:12:18-05:00",
+      "exit_time_iso": "2026-05-02T09:15:53-05:00"
     },
     {
-      "trade_id": 1112, "symbol": "QQQ 260502C677", "underlying": "QQQ", "side": "CALL", "strike": 677, "expiry": "2026-05-02",
-      "direction": "CALL", "entry_price": 1.50, "exit_price": 1.38, "pnl_pct": -8.0, "mfe_pct": 2.2, "mae_pct": -8.6,
-      "exit_reason": "hard_stop_-8.0%_stop=9.1%", "hold_sec": 64,
-      "entry_time_iso": "2026-05-02T09:21:01-05:00", "exit_time_iso": "2026-05-02T09:22:05-05:00"
+      "trade_id": 1112,
+      "symbol": "QQQ 260502C677",
+      "underlying": "QQQ",
+      "side": "CALL",
+      "strike": 677,
+      "expiry": "2026-05-02",
+      "direction": "CALL",
+      "entry_price": 1.5,
+      "exit_price": 1.38,
+      "pnl_pct": -8.0,
+      "mfe_pct": 2.2,
+      "mae_pct": -8.6,
+      "exit_reason": "hard_stop_-8.0%_stop=9.1%",
+      "hold_sec": 64,
+      "entry_time_iso": "2026-05-02T09:21:01-05:00",
+      "exit_time_iso": "2026-05-02T09:22:05-05:00"
     },
     {
-      "trade_id": 1111, "symbol": "QQQ 260502C678", "underlying": "QQQ", "side": "CALL", "strike": 678, "expiry": "2026-05-02",
-      "direction": "CALL", "entry_price": 1.20, "exit_price": 1.30, "pnl_pct": 8.33, "mfe_pct": 9.8, "mae_pct": -0.5,
-      "exit_reason": "floor_7", "hold_sec": 142,
-      "entry_time_iso": "2026-05-02T09:38:12-05:00", "exit_time_iso": "2026-05-02T09:40:34-05:00"
+      "trade_id": 1111,
+      "symbol": "QQQ 260502C678",
+      "underlying": "QQQ",
+      "side": "CALL",
+      "strike": 678,
+      "expiry": "2026-05-02",
+      "direction": "CALL",
+      "entry_price": 1.2,
+      "exit_price": 1.3,
+      "pnl_pct": 8.33,
+      "mfe_pct": 9.8,
+      "mae_pct": -0.5,
+      "exit_reason": "floor_7",
+      "hold_sec": 142,
+      "entry_time_iso": "2026-05-02T09:38:12-05:00",
+      "exit_time_iso": "2026-05-02T09:40:34-05:00"
     },
     {
-      "trade_id": 1110, "symbol": "QQQ 260502P670", "underlying": "QQQ", "side": "PUT", "strike": 670, "expiry": "2026-05-02",
-      "direction": "PUT", "entry_price": 1.05, "exit_price": 1.10, "pnl_pct": 4.76, "mfe_pct": 6.1, "mae_pct": -1.2,
-      "exit_reason": "floor_breach_+4.8%<+7.0%_peak_+6.1%", "hold_sec": 78,
-      "entry_time_iso": "2026-05-02T09:51:44-05:00", "exit_time_iso": "2026-05-02T09:53:02-05:00"
+      "trade_id": 1110,
+      "symbol": "QQQ 260502P670",
+      "underlying": "QQQ",
+      "side": "PUT",
+      "strike": 670,
+      "expiry": "2026-05-02",
+      "direction": "PUT",
+      "entry_price": 1.05,
+      "exit_price": 1.1,
+      "pnl_pct": 4.76,
+      "mfe_pct": 6.1,
+      "mae_pct": -1.2,
+      "exit_reason": "floor_breach_+4.8%<+7.0%_peak_+6.1%",
+      "hold_sec": 78,
+      "entry_time_iso": "2026-05-02T09:51:44-05:00",
+      "exit_time_iso": "2026-05-02T09:53:02-05:00"
     }
-  ]
+  ],
+  "ti_context": {
+    "total_fires": 7,
+    "by_tag": [
+      {
+        "story_tag": "MIDDLE_NOISE",
+        "fires": 3,
+        "closed": 3,
+        "open": 0,
+        "win_pct": 33.3,
+        "avg_pnl_pct": -4.1,
+        "avg_hold_sec": 41.0
+      },
+      {
+        "story_tag": "TREND_WITH",
+        "fires": 2,
+        "closed": 2,
+        "open": 0,
+        "win_pct": 100.0,
+        "avg_pnl_pct": 12.4,
+        "avg_hold_sec": 128.0
+      },
+      {
+        "story_tag": "REVERSAL_OVERSOLD",
+        "fires": 1,
+        "closed": 1,
+        "open": 0,
+        "win_pct": 100.0,
+        "avg_pnl_pct": 8.9,
+        "avg_hold_sec": 95.0
+      },
+      {
+        "story_tag": "MIXED",
+        "fires": 1,
+        "closed": 0,
+        "open": 1,
+        "win_pct": null,
+        "avg_pnl_pct": null,
+        "avg_hold_sec": null
+      }
+    ],
+    "today": [
+      {
+        "ts_iso": "2026-06-02T09:41:12-05:00",
+        "trigger_type": "AVI_TREND",
+        "direction": "CALL",
+        "story_tag": "TREND_WITH",
+        "story_confidence": 1.0,
+        "vwap_zone": "ABOVE_NORMAL",
+        "rsi_zone": "NEUTRAL",
+        "macd_hist_zone": "POS_STRONG",
+        "bb_zone": "UPPER_HALF",
+        "pnl_pct": 14.2,
+        "snapshot_error": false
+      },
+      {
+        "ts_iso": "2026-06-02T10:03:55-05:00",
+        "trigger_type": "FLIP_CALL",
+        "direction": "CALL",
+        "story_tag": "MIDDLE_NOISE",
+        "story_confidence": 1.0,
+        "vwap_zone": "AT_VWAP",
+        "rsi_zone": "NEUTRAL",
+        "macd_hist_zone": "NEG_WEAK",
+        "bb_zone": "LOWER_HALF",
+        "pnl_pct": -3.6,
+        "snapshot_error": false
+      },
+      {
+        "ts_iso": "2026-06-02T10:48:20-05:00",
+        "trigger_type": "FLIP_PUT",
+        "direction": "PUT",
+        "story_tag": "MIXED",
+        "story_confidence": 0.5,
+        "vwap_zone": "BELOW_VWAP",
+        "rsi_zone": "OS",
+        "macd_hist_zone": "NEG_STRONG",
+        "bb_zone": "AT_LOWER",
+        "pnl_pct": null,
+        "snapshot_error": false
+      }
+    ]
+  }
 }
