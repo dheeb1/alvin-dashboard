@@ -197,6 +197,16 @@
   <div id="weekly-wrap"><div class="empty">—</div></div>
 </section>
 
+<!-- 2026-06-11 — judge-day draft verdicts. judge_day.py auto-runs the
+     mechanical 0-for-20 battery when an experiment clock hits day 14
+     (publisher-triggered >=15:15 CT). DRAFTS: the interactive edge-skeptic
+     confound pass + David's ship/kill call stay human. Full briefs:
+     reports/judgment_<id>_<date>.md. -->
+<section id="judgment-section" style="display:none">
+  <h2>Judge-day Drafts <span class="tiny" id="judgment-meta"></span></h2>
+  <div id="judgment-wrap"><div class="empty">—</div></div>
+</section>
+
 <footer>
   <span id="generated-at">—</span> · auto-refresh every 10s ·
   <a href="?src=local" style="color:var(--dim)">local mode</a>
@@ -906,6 +916,35 @@
     $("weekly-wrap").innerHTML = html;
   }
 
+  // 2026-06-11 — judge-day draft verdicts panel. One strip per judged
+  // experiment: lean + mechanical battery result + rationale. Drafts only.
+  function buildJudgmentHtml(d) {
+    if (!d || !d.judgments || !d.judgments.length) return "";
+    const leanCls = (l) => l === "LOOKS_SURVIVING" ? "green"
+      : l === "LOOKS_REFUTED" ? "red" : "yellow";
+    const strips = d.judgments.map(j => {
+      const b = j.battery || {};
+      const v = b.value;
+      return `<div class="watch-strip"><strong>${j.id}</strong> · ` +
+        `<strong class="${leanCls(j.lean)}">${j.lean}</strong> ` +
+        `<span class="dim-num">(${j.mechanical_result} · ${b.sessions ?? "?"} sessions · ` +
+        `value ${v == null ? "—" : v}${b.p_flip == null ? "" : " · p_flip " + b.p_flip})</span>` +
+        `<br>${j.rationale || ""}</div>`;
+    }).join("");
+    return strips +
+      `<div class="tiny" style="margin-top:6px">drafts only — confound pass (edge-skeptic) + ship/kill decision are not automated</div>`;
+  }
+  function renderJudgment(snap) {
+    const sec = $("judgment-section");
+    const d = snap.judgment;
+    const html = buildJudgmentHtml(d);
+    if (!html) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    $("judgment-meta").textContent =
+      `· ${d.run_date} · ${d.narrative_source} · briefs: reports/judgment_<id>_${d.run_date}.md`;
+    $("judgment-wrap").innerHTML = html;
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -1010,6 +1049,7 @@
       renderDebrief(snap);
       renderPreflight(snap);
       renderWeekly(snap);
+      renderJudgment(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
