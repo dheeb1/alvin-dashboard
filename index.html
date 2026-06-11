@@ -112,6 +112,10 @@
     <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></span>
     <!-- 2026-05-20 — AVI pill replaces the IVA pill. Shows A / V / |I| with
          armed/fired state per rule (TREND, FADE). -->
+    <!-- 2026-06-11 — automated pre-flight (preflight_check.py, re-runs on
+         every bot start). PASS/WARN/FAIL on: PID alive, stale-code scan,
+         live_vs_modes, dual-instance, publisher, claude CLI login. -->
+    <span class="pill" id="preflight-pill" style="display:none" title=""><span id="preflight-text">—</span></span>
     <span class="pill" id="avi-pill" style="display:none"><span id="avi-text">—</span></span>
     <span class="pill" id="regime-pill" style="display:none"><span id="regime-text">—</span></span>
     <span class="pill"><span id="last-update">—</span></span>
@@ -182,6 +186,15 @@
 <section id="debrief-section" style="display:none">
   <h2>Daily Debrief <span class="tiny" id="debrief-meta"></span></h2>
   <div id="debrief-wrap"><div class="empty">—</div></div>
+</section>
+
+<!-- 2026-06-11 — Friday weekly digest. weekly_digest.py rolls the week's
+     sessions + daily debriefs into one read (publisher-triggered Friday
+     >=15:25 CT): week-over-week lanes, hourly bleed, experiment trajectory,
+     rolling-20 live expectancy. Full report: reports/weekly_<date>.md. -->
+<section id="weekly-section" style="display:none">
+  <h2>Weekly Digest <span class="tiny" id="weekly-meta"></span></h2>
+  <div id="weekly-wrap"><div class="empty">—</div></div>
 </section>
 
 <footer>
@@ -819,6 +832,16 @@
     const cf = d.claude_counterfactual;
     if (cf && cf.no_trade_evaluated)
       bits.push(`CLAUDE refusals: <strong class="green">${cf.dodged_loser} dodged</strong> / <strong class="red">${cf.cost_winner} cost</strong> / ${cf.flat} flat`);
+    // 2026-06-11 — recorder-integrity WATCH items (data_health). OK checks
+    // stay silent; anything WATCH (silent lane, NO_TAG births, thin OPTLEAD
+    // feed, CLAUDE errors, RUNNER decay misses) surfaces here.
+    const dh = d.data_health;
+    if (dh && dh.watch && dh.watch.length) {
+      const w = dh.watch.map(c => `${c.name}: ${c.detail}`).join(" · ");
+      bits.push(`<strong class="yellow">data health:</strong> ${w}`);
+    } else if (dh) {
+      bits.push(`<span class="dim-num">data health: all ${ (dh.checks||[]).length } checks OK</span>`);
+    }
     out += bits.map(b => `<div class="watch-strip">${b}</div>`).join("");
     return out;
   }
@@ -831,6 +854,56 @@
     $("debrief-meta").textContent =
       `· ${d.session_date} · ${d.narrative_source} · full report: reports/debrief_${d.session_date}.md`;
     $("debrief-wrap").innerHTML = html;
+  }
+
+  // 2026-06-11 — pre-flight badge. preflight_check.py re-runs on every bot
+  // start; PASS = quiet green, WARN/FAIL = loud with the failing checks in
+  // the pill text + everything in the tooltip.
+  function renderPreflight(snap) {
+    const pill = $("preflight-pill");
+    const p = snap?.preflight;
+    if (!p || !p.overall) { pill.style.display = "none"; return; }
+    pill.style.display = "";
+    const cls = p.overall === "PASS" ? "green" : p.overall === "WARN" ? "yellow" : "red";
+    const bad = (p.checks || []).filter(c => c.status === "FAIL" || c.status === "WARN");
+    const badTxt = bad.length ? " · " + bad.map(c => c.name).join(", ") : "";
+    $("preflight-text").innerHTML =
+      `preflight <strong class="${cls}">${p.overall}</strong>${badTxt}`;
+    pill.title = (p.checks || []).map(c => `${c.status} ${c.name}: ${c.detail}`).join("\n")
+      + `\nbot start ${p.bot_start_iso || "?"}`;
+  }
+
+  // 2026-06-11 — Weekly digest panel (Friday, publisher-triggered). Summary
+  // items + a one-line evidence strip; full tables in reports/weekly_<date>.md.
+  function buildWeeklyHtml(d) {
+    if (!d || !d.summary || !d.summary.length) return "";
+    const items = d.summary.map(x => `<li style="margin:4px 0">${x}</li>`).join("");
+    let out = `<ol style="margin:6px 0 12px 20px;padding:0">${items}</ol>`;
+    const bits = [];
+    const h = d.headline_this_week || {}, hp = d.headline_prior_week || {};
+    if (h.closed != null)
+      bits.push(`week <strong class="${fmtPctCls(h.net)}">${fmtPct(h.net)}</strong> net · ${h.closed} closed · ${h.wr}% WR` +
+        (hp.closed ? ` <span class="dim-num">(prior ${fmtPct(hp.net)} / ${hp.closed})</span>` : ""));
+    const r = d.rolling_live;
+    if (r)
+      bits.push(`live rolling-${r.n}: <strong class="${fmtPctCls(r.avg_pnl_pct)}">${fmtPct(r.avg_pnl_pct)}</strong>/trade · ${r.win_pct}% WR` +
+        (r.negative_expectancy ? ` <strong class="red">NEGATIVE</strong>` : ""));
+    const moved = (d.experiment_trajectory || []).filter(e => e.week_delta != null && Math.abs(e.week_delta) >= 1.0);
+    if (moved.length)
+      bits.push(`experiment movers: ` + moved.map(e =>
+        `${e.id} <span class="${fmtPctCls(e.week_delta)}">${fmtPct(e.week_delta)}</span>`).join(" · "));
+    out += bits.map(b => `<div class="watch-strip">${b}</div>`).join("");
+    return out;
+  }
+  function renderWeekly(snap) {
+    const sec = $("weekly-section");
+    const d = snap.weekly;
+    const html = buildWeeklyHtml(d);
+    if (!html) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    $("weekly-meta").textContent =
+      `· ${d.week_start} → ${d.week_end} · ${d.narrative_source} · full report: reports/weekly_${d.week_end}.md`;
+    $("weekly-wrap").innerHTML = html;
   }
 
   function setStatus(snap) {
@@ -935,6 +1008,8 @@
       renderTwoLeg(snap);
       renderExperiments(snap);
       renderDebrief(snap);
+      renderPreflight(snap);
+      renderWeekly(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
