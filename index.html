@@ -135,6 +135,7 @@
     <h2>Trades Today</h2>
     <div>
       <button class="btn" id="csv-btn" disabled>Download CSV</button>
+      <button class="btn" id="xlsx-btn" disabled style="margin-left:6px;">Download XLSX</button>
       <a class="btn" id="tape-csv-btn" href="#" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
     </div>
   </div>
@@ -322,9 +323,11 @@
     if (!trades.length) {
       $("trades-wrap").innerHTML = `<div class="empty">No trades yet today.</div>`;
       $("csv-btn").disabled = true;
+      $("xlsx-btn").disabled = true;
       return;
     }
     $("csv-btn").disabled = false;
+    $("xlsx-btn").disabled = false;
     const rows = trades.map(t => {
       const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
       const pnlCls = fmtPctCls(t.pnl_pct);
@@ -398,10 +401,10 @@
     if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
     return s;
   }
-  function buildCsv(trades) {
-    if (!trades.length) return "";
+  // Union of all keys across flattened trades, preserving first-seen order.
+  // Shared by the CSV and XLSX exports so both emit identical columns.
+  function flattenAllTrades(trades) {
     const flats = trades.map(flattenTrade);
-    // Union of all keys, preserving first-seen order
     const seen = new Set();
     const cols = [];
     for (const r of flats) {
@@ -409,6 +412,11 @@
         if (!seen.has(k)) { seen.add(k); cols.push(k); }
       }
     }
+    return { cols, flats };
+  }
+  function buildCsv(trades) {
+    if (!trades.length) return "";
+    const { cols, flats } = flattenAllTrades(trades);
     const lines = [cols.join(",")];
     for (const r of flats) lines.push(cols.map(c => csvEscape(r[c])).join(","));
     return lines.join("\r\n");
@@ -422,6 +430,119 @@
     const a = document.createElement("a");
     a.href = url;
     a.download = `flipper_${snap.session_date || "today"}_trade_breakdown.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
+  // -------- Styled XLSX export (2026-06-11) --------
+  // Same rows/columns as the CSV, but a real .xlsx painted in the dashboard's
+  // dark theme: CALL green / PUT red, P&L colored by sign, MFE green, MAE red,
+  // story_tag buckets, frozen header + autofilter. ExcelJS is lazy-loaded from
+  // CDN on first click so the dashboard itself loads nothing extra.
+  let _exceljsPromise = null;
+  function loadExcelJS() {
+    if (window.ExcelJS) return Promise.resolve();
+    if (!_exceljsPromise) {
+      _exceljsPromise = new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
+        s.onload = resolve;
+        s.onerror = () => { _exceljsPromise = null; reject(new Error("ExcelJS CDN load failed")); };
+        document.head.appendChild(s);
+      });
+    }
+    return _exceljsPromise;
+  }
+  // Dashboard palette as ARGB (matches :root CSS vars).
+  const XC = {
+    bg: "FF11161F", bgHead: "FF182030", line: "FF1F2A3D",
+    text: "FFD8DEE9", dim: "FF7B88A0", accent: "FF5CC8FF",
+    green: "FF3DDC97", red: "FFFF5470", yellow: "FFFFCC66",
+  };
+  // Mirror of the dashboard's coloring rules, keyed on column name + value.
+  // Returns { color, bold } or null for the default text color.
+  function xlsxCellColor(col, v) {
+    if (v == null || v === "") return null;
+    const c = col.toLowerCase();
+    const s = String(v).toUpperCase();
+    // side-CALL / side-PUT (side, direction, trade_type, claude_verdict, ...)
+    if (/(^|_)(side|direction|verdict)($|_)/.test(c) || c === "trade_type") {
+      if (s.includes("CALL")) return { color: XC.green, bold: true };
+      if (s.includes("PUT")) return { color: XC.red, bold: true };
+    }
+    if (c === "route") {
+      return s.startsWith("AVI") ? { color: XC.accent, bold: true } : { color: XC.dim };
+    }
+    if (c.includes("mfe")) return { color: XC.green };
+    if (c.includes("mae")) return { color: XC.red };
+    if (c.includes("pnl")) {
+      const n = Number(v);
+      if (Number.isFinite(n) && n !== 0) return { color: n > 0 ? XC.green : XC.red };
+      return null;
+    }
+    if (c === "story_tag") { // tagClass()
+      if (s === "MIDDLE_NOISE" || s === "MIXED") return { color: XC.yellow };
+      if (s === "TREND_WITH" || s.startsWith("REVERSAL")) return { color: XC.green };
+      return { color: XC.dim };
+    }
+    if (c === "leg") {
+      if (s === "SCALP") return { color: XC.accent };
+      if (s === "RUNNER") return { color: XC.yellow };
+    }
+    if (c === "exit_reason" || c === "flow_story") return { color: XC.dim };
+    return null;
+  }
+  async function downloadXlsx(snap) {
+    const trades = snap?.trades_today || [];
+    if (!trades.length) return;
+    await loadExcelJS();
+    const { cols, flats } = flattenAllTrades(trades);
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("trades", {
+      views: [{ state: "frozen", ySplit: 1 }],
+    });
+    const thin = { style: "thin", color: { argb: XC.line } };
+    const border = { top: thin, bottom: thin, left: thin, right: thin };
+    // Header row — bg-3 fill, dim uppercase text, like the dashboard <th>.
+    const head = ws.addRow(cols);
+    head.eachCell((cell) => {
+      cell.font = { name: "Consolas", size: 10, bold: true, color: { argb: XC.dim } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bgHead } };
+      cell.border = border;
+    });
+    for (const r of flats) {
+      const row = ws.addRow(cols.map((c) => (r[c] === undefined ? null : r[c])));
+      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        const colName = cols[colNum - 1];
+        const ov = xlsxCellColor(colName, r[colName]);
+        cell.font = {
+          name: "Consolas", size: 10,
+          color: { argb: ov?.color || XC.text },
+          bold: !!ov?.bold,
+        };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bg } };
+        cell.border = border;
+        if (typeof cell.value === "number") cell.alignment = { horizontal: "right" };
+      });
+    }
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+    // Width: longest of header/values per column, clamped to a sane band.
+    cols.forEach((c, i) => {
+      let w = c.length;
+      for (const r of flats) {
+        const v = r[c];
+        if (v != null) w = Math.max(w, String(v).length);
+      }
+      ws.getColumn(i + 1).width = Math.min(28, Math.max(8, w + 2));
+    });
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flipper_${snap.session_date || "today"}_trade_breakdown.xlsx`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -655,6 +776,22 @@
     }
   }
   $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
+  $("xlsx-btn").addEventListener("click", async () => {
+    if (!lastSnap) return;
+    const btn = $("xlsx-btn");
+    const original = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Building...";
+    try {
+      await downloadXlsx(lastSnap);
+      btn.textContent = original;
+    } catch (e) {
+      btn.textContent = "Error: " + e.message;
+      setTimeout(() => { btn.textContent = original; }, 4000);
+    } finally {
+      btn.disabled = false;
+    }
+  });
   // 2026-05-19 — tape CSV button: blob-download to force save. The HTML
   // download attr is ignored cross-origin (gist is a different origin than
   // GitHub Pages), so anchor-with-href just rendered the CSV inline. Fetch
