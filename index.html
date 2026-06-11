@@ -793,6 +793,46 @@
     $("exp-wrap").innerHTML = html;
   }
 
+  // 2026-06-11 — Daily debrief panel. Lessons are the headline; the loss
+  // buckets / clusters / CLAUDE-counterfactual lines are the evidence. The
+  // full table-level detail lives in reports/debrief_<date>.md, not here.
+  function buildDebriefHtml(d) {
+    if (!d || !d.lessons || !d.lessons.length) return "";
+    const h = d.headline || {};
+    const lessons = d.lessons.map(x => `<li style="margin:4px 0">${x}</li>`).join("");
+    let out = `<ol style="margin:6px 0 12px 20px;padding:0">${lessons}</ol>`;
+    const bits = [];
+    if (h.closed != null)
+      bits.push(`<strong class="${fmtPctCls(h.net)}">${fmtPct(h.net)}</strong> net · ${h.closed} closed · ${h.wr}% WR`);
+    const lb = d.loss_buckets;
+    if (lb && lb.losers) {
+      const tw = lb.buckets.TRULY_WRONG, sv = lb.buckets.SALVAGEABLE;
+      bits.push(`losers: <strong class="red">${tw.n} truly wrong</strong> (${fmtPct(tw.net)}) vs <strong class="yellow">${sv.n} salvageable</strong> (${fmtPct(sv.net)})`);
+    }
+    if (d.clusters && d.clusters.length) {
+      const c = d.clusters.map(c =>
+        `${c.n}× ${c.direction} in ${c.span_sec}s (${c.net == null ? "open" : fmtPct(c.net)})`).join(", ");
+      bits.push(`<strong class="yellow">stacked fires:</strong> ${c}`);
+    } else {
+      bits.push(`<span class="dim-num">no stacked-fire clusters</span>`);
+    }
+    const cf = d.claude_counterfactual;
+    if (cf && cf.no_trade_evaluated)
+      bits.push(`CLAUDE refusals: <strong class="green">${cf.dodged_loser} dodged</strong> / <strong class="red">${cf.cost_winner} cost</strong> / ${cf.flat} flat`);
+    out += bits.map(b => `<div class="watch-strip">${b}</div>`).join("");
+    return out;
+  }
+  function renderDebrief(snap) {
+    const sec = $("debrief-section");
+    const d = snap.debrief;
+    const html = buildDebriefHtml(d);
+    if (!html) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    $("debrief-meta").textContent =
+      `· ${d.session_date} · ${d.narrative_source} · full report: reports/debrief_${d.session_date}.md`;
+    $("debrief-wrap").innerHTML = html;
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -894,6 +934,7 @@
       renderTiContext(snap);
       renderTwoLeg(snap);
       renderExperiments(snap);
+      renderDebrief(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
