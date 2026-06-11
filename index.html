@@ -149,8 +149,18 @@
 <section id="ti-section" style="display:none">
   <h2>TI Context · by story tag <span class="tiny" id="ti-total"></span></h2>
   <div id="ti-tag-wrap"><div class="empty">—</div></div>
+  <h2 style="margin-top:18px">Edge-hunt pilot tags <span class="tiny">· record-only sizing overlay (2026-06-10)</span></h2>
+  <div id="ti-pilot-wrap"><div class="empty">—</div></div>
   <h2 style="margin-top:18px">TI Context · today's fires</h2>
   <div id="ti-today-wrap"><div class="empty">—</div></div>
+</section>
+
+<!-- 2026-06-10 — TWO-LEG paper model (SCALP strict-TP-21 + RUNNER wide-cushion).
+     The judgment number is "RUNNER − SCALP": what the wide leg adds (or costs)
+     per pair vs banking the first floor. Hidden until pairs exist. -->
+<section id="two-leg-section" style="display:none">
+  <h2>Two-leg paper · SCALP vs RUNNER <span class="tiny">· 2 contracts/entry, paper-only (2026-06-10)</span></h2>
+  <div id="two-leg-wrap"><div class="empty">—</div></div>
 </section>
 
 <footer>
@@ -461,6 +471,29 @@
           <th class="num">Win%</th><th class="num">Avg P&L%</th><th class="num">Avg Hold</th></tr></thead>
         <tbody>${tagRows}</tbody></table>` : `<div class="empty">No fires yet.</div>`;
 
+    // 2026-06-10 — edge-hunt pilot-tag rollups (r3m_abs_trend_sign: POS = the
+    // forward-favored "absorption rebuilding" bucket; print_burst_present: BURST
+    // vs the dead-tape bleed bucket). Both record-only; this is the judge view.
+    // UNTAGGED = fires from before the bot migrated ti_context (forward-only).
+    const pilotTable = (title, sub, rows) => {
+      const body = (rows || []).map(b => `<tr>
+          <td><strong>${b.bucket}</strong></td>
+          <td class="num">${b.fires}</td>
+          <td class="num">${b.closed}</td>
+          <td class="num ${winCls(b.win_pct)}">${b.win_pct == null ? "—" : b.win_pct.toFixed(0) + "%"}</td>
+          <td class="num ${fmtPctCls(b.avg_pnl_pct)}">${b.avg_pnl_pct == null ? "—" : fmtPct(b.avg_pnl_pct)}</td>
+        </tr>`).join("");
+      return body ? `<table>
+        <thead><tr><th>${title} <span class="tiny">${sub}</span></th><th class="num">Fires</th>
+          <th class="num">Closed</th><th class="num">Win%</th><th class="num">Avg P&L%</th></tr></thead>
+        <tbody>${body}</tbody></table>` : "";
+    };
+    const r3mTbl = pilotTable("r3m_abs_trend_sign", "POS = rebuilding", ti.by_r3m_abs_trend_sign);
+    const burstTbl = pilotTable("print_burst_present", "BURST vs dead tape", ti.by_print_burst);
+    $("ti-pilot-wrap").innerHTML = (r3mTbl || burstTbl)
+      ? `<div class="scroll-x">${r3mTbl}</div><div class="scroll-x" style="margin-top:10px">${burstTbl}</div>`
+      : `<div class="empty">No fires yet.</div>`;
+
     // Today's fires
     const todayRows = (ti.today || []).map(f => {
       const sideCls = f.direction === "CALL" ? "side-CALL" : f.direction === "PUT" ? "side-PUT" : "";
@@ -473,13 +506,45 @@
         <td class="tiny">${f.rsi_zone || "—"}</td>
         <td class="tiny">${f.macd_hist_zone || "—"}</td>
         <td class="tiny">${f.bb_zone || "—"}</td>
+        <td class="tiny"><strong class="${f.r3m_abs_trend_sign === 'POS' ? 'green' : f.r3m_abs_trend_sign === 'NEG' ? 'red' : 'dim-num'}">${f.r3m_abs_trend_sign || "—"}</strong></td>
+        <td class="tiny"><strong class="${f.print_burst_present === 1 ? 'green' : f.print_burst_present === 0 ? 'dim-num' : ''}">${f.print_burst_present == null ? "—" : f.print_burst_present ? "BURST" : "·"}</strong></td>
         <td class="num ${fmtPctCls(f.pnl_pct)}">${f.pnl_pct == null ? '<span class="tiny">open</span>' : fmtPct(f.pnl_pct)}</td>
       </tr>`;
     }).join("");
     $("ti-today-wrap").innerHTML = todayRows ? `<div class="scroll-x"><table>
         <thead><tr><th>Time</th><th>Trigger</th><th>Dir</th><th>Story</th>
-          <th>VWAP zone</th><th>RSI</th><th>MACD hist</th><th>BB</th><th class="num">P&L%</th></tr></thead>
+          <th>VWAP zone</th><th>RSI</th><th>MACD hist</th><th>BB</th><th>r3m abs</th><th>burst</th><th class="num">P&L%</th></tr></thead>
         <tbody>${todayRows}</tbody></table></div>` : `<div class="empty">No fires today.</div>`;
+  }
+
+  // 2026-06-10 — two-leg paper rollup. One row per scope (today / all-time);
+  // complete pairs only (both legs closed). RUNNER − SCALP is the design's
+  // judgment number: positive = the wide runner earns more than the strict
+  // first-floor bank it replaces.
+  function renderTwoLeg(snap) {
+    const tl = snap.two_leg;
+    const sec = $("two-leg-section");
+    if (!tl || (!tl.total && !tl.today)) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    const row = (label, a) => !a ? "" : `<tr>
+        <td><strong>${label}</strong></td>
+        <td class="num">${a.pairs}</td>
+        <td class="num ${winCls(a.scalp_wr)}">${a.scalp_wr.toFixed(0)}%</td>
+        <td class="num ${fmtPctCls(a.scalp_avg)}">${fmtPct(a.scalp_avg)}</td>
+        <td class="num ${winCls(a.runner_wr)}">${a.runner_wr.toFixed(0)}%</td>
+        <td class="num ${fmtPctCls(a.runner_avg)}">${fmtPct(a.runner_avg)}</td>
+        <td class="num ${fmtPctCls(a.blend_avg)}">${fmtPct(a.blend_avg)}</td>
+        <td class="num ${fmtPctCls(a.blend_net)}">${fmtPct(a.blend_net)}</td>
+        <td class="num ${fmtPctCls(a.runner_minus_scalp_avg)}"><strong>${fmtPct(a.runner_minus_scalp_avg)}</strong></td>
+      </tr>`;
+    const body = row("TODAY", tl.today) + row("ALL", tl.total);
+    $("two-leg-wrap").innerHTML = body ? `<div class="scroll-x"><table>
+        <thead><tr><th></th><th class="num">Pairs</th>
+          <th class="num">Scalp W%</th><th class="num">Scalp avg</th>
+          <th class="num">Runner W%</th><th class="num">Runner avg</th>
+          <th class="num">Blend avg</th><th class="num">Blend net</th>
+          <th class="num">Runner − Scalp</th></tr></thead>
+        <tbody>${body}</tbody></table></div>` : `<div class="empty">No pairs yet.</div>`;
   }
 
   function setStatus(snap) {
@@ -581,6 +646,7 @@
       renderOpenPositions(snap);
       renderTrades(snap);
       renderTiContext(snap);
+      renderTwoLeg(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
