@@ -174,6 +174,16 @@
   <div id="exp-wrap"><div class="empty">—</div></div>
 </section>
 
+<!-- 2026-06-11 — Nightly auto-debrief. nightly_debrief.py runs at ~15:10 CT
+     (publisher-triggered), classifies the day's losers via post-exit QQQ
+     path, flags stacked-fire clusters, scores the CLAUDE refusals, and
+     narrates 3-5 lessons (claude -p, debrief_prompt.md frozen policy).
+     Full report: reports/debrief_<date>.md. Hidden until the first run. -->
+<section id="debrief-section" style="display:none">
+  <h2>Daily Debrief <span class="tiny" id="debrief-meta"></span></h2>
+  <div id="debrief-wrap"><div class="empty">—</div></div>
+</section>
+
 <footer>
   <span id="generated-at">—</span> · auto-refresh every 10s ·
   <a href="?src=local" style="color:var(--dim)">local mode</a>
@@ -701,6 +711,9 @@
   // complete pairs only (both legs closed). RUNNER − SCALP is the design's
   // judgment number: positive = the wide runner earns more than the strict
   // first-floor bank it replaces.
+  // 2026-06-11 — RADICAL third leg (wide-net-early exit A/B): three columns
+  // appended, rendered as dashes until the first radical pairs land
+  // (radical_* keys absent pre-restart / pre-data).
   function renderTwoLeg(snap) {
     const tl = snap.two_leg;
     const sec = $("two-leg-section");
@@ -716,6 +729,9 @@
         <td class="num ${fmtPctCls(a.blend_avg)}">${fmtPct(a.blend_avg)}</td>
         <td class="num ${fmtPctCls(a.blend_net)}">${fmtPct(a.blend_net)}</td>
         <td class="num ${fmtPctCls(a.runner_minus_scalp_avg)}"><strong>${fmtPct(a.runner_minus_scalp_avg)}</strong></td>
+        <td class="num">${a.radical_pairs != null ? `${a.radical_wr.toFixed(0)}% <span class="dim-num">(${a.radical_pairs})</span>` : "—"}</td>
+        <td class="num ${a.radical_avg != null ? fmtPctCls(a.radical_avg) : ""}">${a.radical_avg != null ? fmtPct(a.radical_avg) : "—"}</td>
+        <td class="num ${a.radical_minus_scalp_avg != null ? fmtPctCls(a.radical_minus_scalp_avg) : ""}">${a.radical_minus_scalp_avg != null ? `<strong>${fmtPct(a.radical_minus_scalp_avg)}</strong>` : "—"}</td>
       </tr>`;
     const body = row("TODAY", tl.today) + row("ALL", tl.total);
     $("two-leg-wrap").innerHTML = body ? `<div class="scroll-x"><table>
@@ -723,7 +739,9 @@
           <th class="num">Scalp W%</th><th class="num">Scalp avg</th>
           <th class="num">Runner W%</th><th class="num">Runner avg</th>
           <th class="num">Blend avg</th><th class="num">Blend net</th>
-          <th class="num">Runner − Scalp</th></tr></thead>
+          <th class="num">Runner − Scalp</th>
+          <th class="num">Radical W%</th><th class="num">Radical avg</th>
+          <th class="num">Radical − Scalp</th></tr></thead>
         <tbody>${body}</tbody></table></div>` : `<div class="empty">No pairs yet.</div>`;
   }
 
