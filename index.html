@@ -164,6 +164,16 @@
   <div id="two-leg-wrap"><div class="empty">—</div></div>
 </section>
 
+<!-- 2026-06-11 — Experiment scoreboard. One row per running forward judgment
+     (registry: experiments.json, math: dashboard_publisher.load_experiments).
+     Sessions are the effective n; H1/H2 is a PREVIEW split shown at >=6
+     sessions; JUDGE NOW at day 14 means "run the real study", not a verdict.
+     Hidden until the publisher ships the experiments block. -->
+<section id="exp-section" style="display:none">
+  <h2>Experiments <span class="tiny">· forward-judgment scoreboard · n = sessions · H1/H2 preview at ≥6 sessions</span></h2>
+  <div id="exp-wrap"><div class="empty">—</div></div>
+</section>
+
 <footer>
   <span id="generated-at">—</span> · auto-refresh every 10s ·
   <a href="?src=local" style="color:var(--dim)">local mode</a>
@@ -537,6 +547,55 @@
       }
       ws.getColumn(i + 1).width = Math.min(28, Math.max(8, w + 2));
     });
+    // 2026-06-11 — second worksheet: the experiment scoreboard (same snapshot
+    // block the Experiments panel renders), one row per running judgment.
+    const exp = (snap?.experiments && snap.experiments.experiments) || [];
+    if (exp.length) {
+      const ecols = ["title", "status", "start_date", "judge_date", "day", "of",
+                     "sessions", "n", "judgment_label", "judgment_value",
+                     "h1_value", "h2_value", "note"];
+      const ws2 = wb.addWorksheet("experiments", { views: [{ state: "frozen", ySplit: 1 }] });
+      const ehead = ws2.addRow(ecols);
+      ehead.eachCell((cell) => {
+        cell.font = { name: "Consolas", size: 10, bold: true, color: { argb: XC.dim } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bgHead } };
+        cell.border = border;
+      });
+      for (const e of exp) {
+        const flat = { ...e,
+          h1_value: e.h1 ? e.h1.value : null,
+          h2_value: e.h2 ? e.h2.value : null };
+        const row = ws2.addRow(ecols.map((c) => (flat[c] === undefined ? null : flat[c])));
+        row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+          const cName = ecols[colNum - 1];
+          let color = XC.text, bold = false;
+          if (/_value$/.test(cName) && typeof cell.value === "number" && cell.value !== 0) {
+            color = cell.value > 0 ? XC.green : XC.red;
+            bold = cName === "judgment_value";
+          } else if (cName === "status") {
+            color = flat.status === "JUDGE_NOW" ? XC.accent
+                  : flat.status === "RUNNING" ? XC.yellow
+                  : flat.status === "ERROR" ? XC.red : XC.dim;
+            bold = true;
+          } else if (cName === "note" || cName === "judgment_label") {
+            color = XC.dim;
+          }
+          cell.font = { name: "Consolas", size: 10, color: { argb: color }, bold };
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bg } };
+          cell.border = border;
+          if (typeof cell.value === "number") cell.alignment = { horizontal: "right" };
+        });
+      }
+      ecols.forEach((c, i) => {
+        let w = c.length;
+        for (const e of exp) {
+          const v = c === "h1_value" ? (e.h1 && e.h1.value)
+                  : c === "h2_value" ? (e.h2 && e.h2.value) : e[c];
+          if (v != null) w = Math.max(w, String(v).length);
+        }
+        ws2.getColumn(i + 1).width = Math.min(34, Math.max(8, w + 2));
+      });
+    }
     const buf = await wb.xlsx.writeBuffer();
     const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     const url = URL.createObjectURL(blob);
@@ -668,6 +727,54 @@
         <tbody>${body}</tbody></table></div>` : `<div class="empty">No pairs yet.</div>`;
   }
 
+  // 2026-06-11 — Experiment scoreboard. buildExperimentsHtml is pure
+  // (snapshot block in, HTML string out) so the Node smoke test can run it
+  // verbatim. Day clock starts at the first DATA row, not the build date —
+  // pending-restart lag taught us those differ.
+  function expStatusPill(st) {
+    if (st === "RUNNING") return '<strong class="yellow">RUNNING</strong>';
+    if (st === "JUDGE_NOW") return '<strong style="color:var(--accent)">JUDGE NOW</strong>';
+    if (st === "WAITING_DATA") return '<span class="dim-num">WAITING</span>';
+    return '<strong class="red">' + (st || "?") + "</strong>";
+  }
+  function expHalf(h) {
+    if (!h) return '<span class="dim-num tiny">—</span>';
+    if (h.value == null) return '<span class="dim-num tiny">n/a</span>';
+    return `<span class="${fmtPctCls(h.value)}">${fmtPct(h.value)}</span> <span class="tiny">(${h.sessions}s)</span>`;
+  }
+  function buildExperimentsHtml(ex) {
+    const list = (ex && ex.experiments) || [];
+    if (!list.length) return "";
+    const rows = list.map(e => {
+      const pct = e.day != null && e.of ? Math.min(100, Math.round(e.day / e.of * 100)) : 0;
+      const bar = `<div style="background:var(--line);height:4px;border-radius:2px;min-width:64px;margin-top:3px">
+          <div style="width:${pct}%;background:var(${pct >= 100 ? "--accent" : "--yellow"});height:4px;border-radius:2px"></div></div>`;
+      return `<tr>
+        <td><strong>${e.title}</strong>${e.note ? `<div class="tiny">${e.note}</div>` : ""}</td>
+        <td>${e.day != null ? `<span class="tiny">day ${e.day}/${e.of}</span>${bar}` : '<span class="dim-num tiny">—</span>'}</td>
+        <td class="num">${e.sessions || "—"}</td>
+        <td class="num">${e.n || "—"}</td>
+        <td class="num">${e.judgment_value == null ? '<span class="dim-num">—</span>'
+            : `<strong class="${fmtPctCls(e.judgment_value)}">${fmtPct(e.judgment_value)}</strong>`}
+          <div class="tiny">${e.judgment_label || ""}</div></td>
+        <td class="num">${expHalf(e.h1)}</td>
+        <td class="num">${expHalf(e.h2)}</td>
+        <td>${expStatusPill(e.status)}</td>
+      </tr>`;
+    }).join("");
+    return `<div class="scroll-x"><table>
+      <thead><tr><th>Experiment</th><th>Clock</th><th class="num">Sessions</th><th class="num">n</th>
+        <th class="num">Judgment</th><th class="num">H1</th><th class="num">H2</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }
+  function renderExperiments(snap) {
+    const sec = $("exp-section");
+    const html = buildExperimentsHtml(snap.experiments);
+    if (!html) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    $("exp-wrap").innerHTML = html;
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -768,6 +875,7 @@
       renderTrades(snap);
       renderTiContext(snap);
       renderTwoLeg(snap);
+      renderExperiments(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
