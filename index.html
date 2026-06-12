@@ -570,7 +570,11 @@
         if (typeof cell.value === "number") cell.alignment = { horizontal: "right" };
       });
     }
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: cols.length } };
+    // autoFilter MUST span the whole table (header + every data row). A
+    // header-only range (to.row:1) is what crashed Excel on sort: the filter
+    // claims one row while real data sits below it, and sorting through that
+    // mismatched range corrupts the sheet. (2026-06-12)
+    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1 + flats.length, column: cols.length } };
     // Width: longest of header/values per column, clamped to a sane band.
     cols.forEach((c, i) => {
       let w = c.length;
