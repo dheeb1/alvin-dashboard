@@ -543,38 +543,18 @@
     await loadExcelJS();
     const { cols, flats } = flattenAllTrades(trades);
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("trades", {
-      views: [{ state: "frozen", ySplit: 1 }],
+    // Trades as a native Excel Table — sortable/filterable, frozen header.
+    // We deliberately DO NOT paint each cell (fill/font/border): ~33k
+    // individually-styled cells is what crashed Excel on sort (confirmed by
+    // bisecting: a plain Table sorts fine, the painted one crashes). The
+    // Table's built-in banding gives structure cheaply. (2026-06-12)
+    const ws = wb.addWorksheet("trades", { views: [{ state: "frozen", ySplit: 1 }] });
+    ws.addTable({
+      name: "TradesTable", ref: "A1", headerRow: true,
+      style: { theme: "TableStyleMedium2", showRowStripes: true },
+      columns: cols.map((c) => ({ name: c, filterButton: true })),
+      rows: flats.map((r) => cols.map((c) => (r[c] === undefined ? null : r[c]))),
     });
-    const thin = { style: "thin", color: { argb: XC.line } };
-    const border = { top: thin, bottom: thin, left: thin, right: thin };
-    // Header row — bg-3 fill, dim uppercase text, like the dashboard <th>.
-    const head = ws.addRow(cols);
-    head.eachCell((cell) => {
-      cell.font = { name: "Consolas", size: 10, bold: true, color: { argb: XC.dim } };
-      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bgHead } };
-      cell.border = border;
-    });
-    for (const r of flats) {
-      const row = ws.addRow(cols.map((c) => (r[c] === undefined ? null : r[c])));
-      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-        const colName = cols[colNum - 1];
-        const ov = xlsxCellColor(colName, r[colName]);
-        cell.font = {
-          name: "Consolas", size: 10,
-          color: { argb: ov?.color || XC.text },
-          bold: !!ov?.bold,
-        };
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bg } };
-        cell.border = border;
-        if (typeof cell.value === "number") cell.alignment = { horizontal: "right" };
-      });
-    }
-    // autoFilter MUST span the whole table (header + every data row). A
-    // header-only range (to.row:1) is what crashed Excel on sort: the filter
-    // claims one row while real data sits below it, and sorting through that
-    // mismatched range corrupts the sheet. (2026-06-12)
-    ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1 + flats.length, column: cols.length } };
     // Width: longest of header/values per column, clamped to a sane band.
     cols.forEach((c, i) => {
       let w = c.length;
@@ -592,37 +572,17 @@
                      "sessions", "n", "judgment_label", "judgment_value",
                      "h1_value", "h2_value", "note"];
       const ws2 = wb.addWorksheet("experiments", { views: [{ state: "frozen", ySplit: 1 }] });
-      const ehead = ws2.addRow(ecols);
-      ehead.eachCell((cell) => {
-        cell.font = { name: "Consolas", size: 10, bold: true, color: { argb: XC.dim } };
-        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bgHead } };
-        cell.border = border;
+      ws2.addTable({
+        name: "ExperimentsTable", ref: "A1", headerRow: true,
+        style: { theme: "TableStyleMedium2", showRowStripes: true },
+        columns: ecols.map((c) => ({ name: c, filterButton: true })),
+        rows: exp.map((e) => {
+          const flat = { ...e,
+            h1_value: e.h1 ? e.h1.value : null,
+            h2_value: e.h2 ? e.h2.value : null };
+          return ecols.map((c) => (flat[c] === undefined ? null : flat[c]));
+        }),
       });
-      for (const e of exp) {
-        const flat = { ...e,
-          h1_value: e.h1 ? e.h1.value : null,
-          h2_value: e.h2 ? e.h2.value : null };
-        const row = ws2.addRow(ecols.map((c) => (flat[c] === undefined ? null : flat[c])));
-        row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-          const cName = ecols[colNum - 1];
-          let color = XC.text, bold = false;
-          if (/_value$/.test(cName) && typeof cell.value === "number" && cell.value !== 0) {
-            color = cell.value > 0 ? XC.green : XC.red;
-            bold = cName === "judgment_value";
-          } else if (cName === "status") {
-            color = flat.status === "JUDGE_NOW" ? XC.accent
-                  : flat.status === "RUNNING" ? XC.yellow
-                  : flat.status === "ERROR" ? XC.red : XC.dim;
-            bold = true;
-          } else if (cName === "note" || cName === "judgment_label") {
-            color = XC.dim;
-          }
-          cell.font = { name: "Consolas", size: 10, color: { argb: color }, bold };
-          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: XC.bg } };
-          cell.border = border;
-          if (typeof cell.value === "number") cell.alignment = { horizontal: "right" };
-        });
-      }
       ecols.forEach((c, i) => {
         let w = c.length;
         for (const e of exp) {
