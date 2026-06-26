@@ -331,6 +331,15 @@
     const rows = positions.map(p => {
       const sideClass = p.side === "CALL" ? "side-CALL" : p.side === "PUT" ? "side-PUT" : "";
       const pnlCls = fmtPctCls(p.unrealized_pnl_pct);
+      // 2026-06-26 — live give-back indicator. Peak % = best unrealized % so far
+      // (from high_price); Off Peak = how far below that high-water mark we are
+      // right now. "bleeding" flags a real winner (peak >= +15%) that has handed
+      // back >= 10 points — the exact watch-it-live case to catch in real time.
+      const peakPct = (p.entry_price && p.high_price)
+        ? (p.high_price / p.entry_price - 1) * 100 : null;
+      const offPeak = (peakPct != null && p.unrealized_pnl_pct != null)
+        ? (p.unrealized_pnl_pct - peakPct) : null;
+      const bleeding = (peakPct != null && peakPct >= 15 && offPeak != null && offPeak <= -10);
       return `<tr>
         <td>${fmtTime(p.entry_time_iso)}</td>
         <td>${p.underlying || ""} <strong class="${sideClass}">${p.side || p.direction || ""}</strong> ${p.strike ?? ""}</td>
@@ -339,6 +348,8 @@
         <td class="num ${pnlCls}">${fmtPct(p.unrealized_pnl_pct)}</td>
         <td class="num ${pnlCls}">${fmtDollars(p.unrealized_pnl_dollars)}</td>
         <td class="num">${fmtPrice(p.high_price)}</td>
+        <td class="num ${fmtPctCls(peakPct)}">${fmtPct(peakPct)}</td>
+        <td class="num ${bleeding ? 'red' : 'dim-num'}">${fmtPct(offPeak)}${bleeding ? ' ⚠' : ''}</td>
         <td class="num">${fmtDur(p.hold_sec)}</td>
       </tr>`;
     }).join("");
@@ -349,6 +360,8 @@
           <th class="num">Entry $</th><th class="num">Last $</th>
           <th class="num">Unreal %</th><th class="num">Unreal $</th>
           <th class="num">Peak $</th>
+          <th class="num">Peak %</th>
+          <th class="num">Off Peak</th>
           <th class="num">Held</th>
         </tr></thead>
         <tbody>${rows}</tbody>
