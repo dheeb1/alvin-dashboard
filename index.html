@@ -207,6 +207,21 @@
   <div id="judgment-wrap"><div class="empty">—</div></div>
 </section>
 
+<!-- 2026-07-06 — PICTURE DECISIONS (record-only, paper). The per-entry "why"
+     for the SPIKE_PICTURE lanes: the model verdict + the four choir votes
+     (slope/RSI/MACD/BB) + the dip-vs-chase LOCATION of each entry (David's
+     slope=direction / z=location thesis — a CALL bought at the extended TOP is
+     a chase, a CALL bought on a DIP is a ride). Data: recorders.db
+     picture_entry_decisions via dashboard_publisher.load_picture_decisions.
+     Reasoning only — NO P&L (outcomes live in the ledger + the nightly race).
+     Hidden until the first picture entry (07-07 boot). -->
+<section id="picdec-section" style="display:none">
+  <h2>Picture Decisions <span class="tiny">· singer + choir + dip/chase · record-only, paper (2026-07-06)</span></h2>
+  <div id="picdec-summary" class="grid"></div>
+  <div id="picdec-regime-wrap" style="margin-top:12px"></div>
+  <div id="picdec-rows-wrap" style="margin-top:12px"><div class="empty">—</div></div>
+</section>
+
 <footer>
   <span id="generated-at">—</span> · auto-refresh every 10s ·
   <a href="?src=local" style="color:var(--dim)">local mode</a>
@@ -922,6 +937,74 @@
     $("judgment-wrap").innerHTML = html;
   }
 
+  // 2026-07-06 — Picture Decisions. buildPictureDecisionsHtml is pure
+  // (snapshot block in, {summary,regime,rows} HTML out) so it can be smoke-
+  // tested verbatim. Reasoning only: verdict + choir votes + dip/chase loc.
+  function pdVoteChip(label, v) {
+    if (v == null) return "";
+    const cls = v > 0 ? "green" : v < 0 ? "red" : "dim-num";
+    const s = v > 0 ? "+" + v : "" + v;
+    return `<span class="tiny ${cls}" style="margin-right:7px">${label}:${s}</span>`;
+  }
+  function pdLocChip(loc) {
+    if (loc === "TOP") return '<span class="tiny yellow">TOP</span>';   // extended = chase risk
+    if (loc === "DIP") return '<span class="tiny green">DIP</span>';    // pulled back = ride
+    if (loc === "MID") return '<span class="tiny dim-num">MID</span>';
+    return '<span class="tiny dim-num">—</span>';
+  }
+  function buildPictureDecisionsHtml(pd) {
+    if (!pd || !pd.n) return null;
+    const lm = pd.location_mix || {};
+    const summary = [
+      { label: "Entries", value: pd.n, cls: "",
+        sub: `${pd.calls} call · ${pd.puts} put` },
+      { label: "Location mix", valueHtml:
+        `${pdLocChip("TOP")} ${lm.TOP || 0} · ${pdLocChip("MID")} ${lm.MID || 0} · ${pdLocChip("DIP")} ${lm.DIP || 0}` },
+      { label: "Chase vs ride (CALLs)", valueHtml:
+        `<span class="yellow">chase @top ${pd.chase_call_at_top || 0}</span> · <span class="green">ride @dip ${pd.ride_call_at_dip || 0}</span>` },
+    ].map(c => `<div class="card">
+        <div class="label">${c.label}</div>
+        <div class="value ${c.cls || ""}" style="font-size:${c.valueHtml ? "13px" : "22px"}">${c.valueHtml || c.value}</div>
+        ${c.sub ? `<div class="sub">${c.sub}</div>` : ""}
+      </div>`).join("");
+
+    const rrows = (pd.by_regime || []).map(r => `<tr>
+        <td><strong>${r.regime}</strong></td>
+        <td class="num">${r.n}</td>
+        <td class="num green">${r.calls}</td>
+        <td class="num red">${r.puts}</td></tr>`).join("");
+    const regime = rrows ? `<div class="scroll-x"><table>
+        <thead><tr><th>Regime</th><th class="num">n</th><th class="num">CALL</th><th class="num">PUT</th></tr></thead>
+        <tbody>${rrows}</tbody></table></div>` : "";
+
+    const erows = (pd.rows || []).slice().reverse().map(e => {
+      const dirCls = e.dir === "CALL" ? "green" : "red";
+      const cs = e.choir == null ? "" : (e.choir >= 0 ? "+" + e.choir : "" + e.choir);
+      return `<tr>
+        <td class="tiny">${e.t}</td>
+        <td class="tiny">${e.type}</td>
+        <td class="${dirCls}"><strong>${e.dir}</strong></td>
+        <td><span class="tiny">${e.regime}</span>${e.dip_entry ? ' <span class="tiny green">dip-buy</span>' : ""}</td>
+        <td class="num">${e.z == null ? "—" : e.z.toFixed(2)}</td>
+        <td>${pdVoteChip("sl", e.votes.slope)}${pdVoteChip("rsi", e.votes.rsi)}${pdVoteChip("macd", e.votes.macd)}${pdVoteChip("bb", e.votes.bb)}<span class="tiny dim-num">Σ${cs}</span></td>
+        <td>${pdLocChip(e.loc)}</td></tr>`;
+    }).join("");
+    const rows = erows ? `<div class="scroll-x"><table>
+        <thead><tr><th>Time</th><th>Type</th><th>Dir</th><th>Regime</th><th class="num">z</th>
+          <th>Choir votes (singer picks regime, choir votes inside)</th><th>Loc</th></tr></thead>
+        <tbody>${erows}</tbody></table></div>` : `<div class="empty">No picture entries yet.</div>`;
+    return { summary, regime, rows };
+  }
+  function renderPictureDecisions(snap) {
+    const sec = $("picdec-section");
+    const h = buildPictureDecisionsHtml(snap.picture_decisions);
+    if (!h) { sec.style.display = "none"; return; }
+    sec.style.display = "";
+    $("picdec-summary").innerHTML = h.summary;
+    $("picdec-regime-wrap").innerHTML = h.regime;
+    $("picdec-rows-wrap").innerHTML = h.rows;
+  }
+
   function setStatus(snap) {
     const bot = snap?.bot || {};
     $("session-date").textContent = snap?.session_date || "—";
@@ -1027,6 +1110,7 @@
       renderPreflight(snap);
       renderWeekly(snap);
       renderJudgment(snap);
+      renderPictureDecisions(snap);
       lastOk = new Date();
       $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
     } catch (e) {
