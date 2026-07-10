@@ -474,6 +474,9 @@
   }
   // Union of all keys across flattened trades, preserving first-seen order.
   // Shared by the CSV and XLSX exports so both emit identical columns.
+  // Columns that are blank (null/undefined/"") in EVERY row are dropped — the
+  // export carries only columns that hold data (2026-07-10: kills the ~40
+  // permanently-empty AR..CF columns). A value of 0/false counts as data.
   function flattenAllTrades(trades) {
     const flats = trades.map(flattenTrade);
     const seen = new Set();
@@ -483,7 +486,10 @@
         if (!seen.has(k)) { seen.add(k); cols.push(k); }
       }
     }
-    return { cols, flats };
+    const isBlank = (v) => v == null || v === "";
+    const nonEmptyCols = cols.filter(
+      (c) => flats.some((r) => !isBlank(r[c])));
+    return { cols: nonEmptyCols, flats };
   }
   function buildCsv(trades) {
     if (!trades.length) return "";
