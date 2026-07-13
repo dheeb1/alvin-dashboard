@@ -404,6 +404,10 @@
       const pnlCls = fmtPctCls(t.pnl_pct);
       const isAvi = (t.route === "AVI_TREND" || t.route === "AVI_FADE");
       const routeCls = isAvi ? "star" : "dim-num";
+      // 2026-07-13 — record-only EMA slopes (per-min change of the 5/10/15 EMA
+      // at the spike), joined from the picture tagger by trade_id. NULL on rows
+      // with no matching spike_picture_fires detection. Gates nothing.
+      const bd = t.breakdown || {};
       return `<tr>
         <td>${fmtTime(t.entry_time_iso)}</td>
         <td>${fmtTime(t.exit_time_iso)}</td>
@@ -415,6 +419,9 @@
         <td class="num ${pnlCls}">${fmtDollars(t.pnl_dollars)}</td>
         <td class="num green">${fmtPct(t.mfe_pct)}</td>
         <td class="num red">${fmtPct(t.mae_pct)}</td>
+        <td class="num ${slopeCls(bd.pic_ema_slope5)}">${fmtSlope(bd.pic_ema_slope5)}</td>
+        <td class="num ${slopeCls(bd.pic_ema_slope10)}">${fmtSlope(bd.pic_ema_slope10)}</td>
+        <td class="num ${slopeCls(bd.pic_ema_slope15)}">${fmtSlope(bd.pic_ema_slope15)}</td>
         <td class="num">${fmtDur(t.hold_sec)}</td>
         <td class="tiny">${t.exit_reason || ""}</td>
       </tr>`;
@@ -426,6 +433,9 @@
           <th class="num">Entry $</th><th class="num">Exit $</th>
           <th class="num">P&L %</th><th class="num">P&L $</th>
           <th class="num">MFE</th><th class="num">MAE</th>
+          <th class="num" title="EMA5 slope at the spike — per-minute change of the 5-min EMA over 3 bars (record-only; faster trend read than VWAP slope). Blank if no picture detection matched.">eSl5</th>
+          <th class="num" title="EMA10 slope at the spike — per-minute change of the 10-min EMA over 3 bars (record-only).">eSl10</th>
+          <th class="num" title="EMA15 slope at the spike — per-minute change of the 15-min EMA over 3 bars (record-only).">eSl15</th>
           <th class="num">Held</th>
           <th>Reason</th>
         </tr></thead>
@@ -450,6 +460,19 @@
     if (v == null) return "—";
     const n = Number(v);
     return Number.isFinite(n) ? n.toFixed(dp) : "—";
+  }
+  // 2026-07-13 — EMA slope formatting: signed, 3dp; color by sign like P&L.
+  function fmtSlope(v) {
+    if (v == null) return "—";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    return (n > 0 ? "+" : "") + n.toFixed(3);
+  }
+  function slopeCls(v) {
+    if (v == null) return "";
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "";
+    return n > 0 ? "green" : n < 0 ? "red" : "";
   }
   // -------- CSV export --------
   // Flatten one trade (top-level + breakdown.*) into a single row dict
