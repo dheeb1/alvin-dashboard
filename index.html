@@ -412,6 +412,7 @@
         <td>${fmtTime(t.entry_time_iso)}</td>
         <td>${fmtTime(t.exit_time_iso)}</td>
         <td>${t.underlying || ""} <strong class="${sideClass}">${t.side || t.direction || ""}</strong> ${t.strike ?? ""}</td>
+        <td class="num">${t.ribbon_ema ?? ""}</td>
         <td class="${routeCls}">${t.route || "—"}</td>
         <td class="num">${fmtPrice(t.entry_price)}</td>
         <td class="num">${fmtPrice(t.exit_price)}</td>
@@ -429,7 +430,9 @@
     $("trades-wrap").innerHTML = `
       <table>
         <thead><tr>
-          <th>Entry</th><th>Exit</th><th>Contract</th><th>Route</th>
+          <th>Entry</th><th>Exit</th><th>Contract</th>
+          <th class="num" title="Flip-ribbon EMA period (6/9/12/30) — which tick-EMA machine opened this trade (FLIP_RIBBON_&lt;n&gt;). Blank for non-ribbon lanes.">EMA</th>
+          <th>Route</th>
           <th class="num">Entry $</th><th class="num">Exit $</th>
           <th class="num">P&L %</th><th class="num">P&L $</th>
           <th class="num">MFE</th><th class="num">MAE</th>
