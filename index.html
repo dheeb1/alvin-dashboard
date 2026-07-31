@@ -311,9 +311,16 @@
     const grossSub = (s.sum_pnl_dollars_gross != null && s.commission_total_dollars != null)
       ? ` (gross ${fmtDollars(s.sum_pnl_dollars_gross, false)} − ${fmtDollars(s.commission_total_dollars, false).replace("-","").replace("+","")} comm)`
       : "";
+    // 2026-07-31 — Alpaca-lens cross-check: the same day total re-attributed
+    // the way the Alpaca position screen books it (average cost). Equal to
+    // gross when every round trip is closed — a visible mismatch means an
+    // open position or a mirror fill gap.
+    const lensSub = (s.sum_alpaca_realized_dollars != null)
+      ? ` · Alpaca lens ${fmtDollars(s.sum_alpaca_realized_dollars, false)}`
+      : "";
     const cards = [
       { label: "Day P&L (net)", value: fmtDollars(s.sum_pnl_dollars, false), cls: sumCls,
-        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades${grossSub}` },
+        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades${grossSub}${lensSub}` },
       { label: "Win Rate", value: (s.win_rate_pct || 0).toFixed(0) + "%", cls: wrCls },
       { label: "Commission", value: fmtDollars(s.commission_total_dollars ? -Math.abs(s.commission_total_dollars) : 0, false),
         cls: "yellow",
@@ -418,6 +425,7 @@
         <td class="num">${fmtPrice(t.exit_price)}</td>
         <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
         <td class="num ${pnlCls}">${fmtDollars(t.pnl_dollars)}</td>
+        <td class="num ${fmtPctCls(t.alpaca_realized_dollars)}">${fmtDollars(t.alpaca_realized_dollars)}</td>
         <td class="num green">${fmtPct(t.mfe_pct)}</td>
         <td class="num red">${fmtPct(t.mae_pct)}</td>
         <td class="num ${slopeCls(bd.pic_ema_slope5)}">${fmtSlope(bd.pic_ema_slope5)}</td>
@@ -435,6 +443,7 @@
           <th>Route</th>
           <th class="num">Entry $</th><th class="num">Exit $</th>
           <th class="num">P&L %</th><th class="num">P&L $</th>
+          <th class="num" title="What the Alpaca account booked when this trade's contract sold — average-cost attribution, so overlapping trades on the same contract split the money differently than P&L $ (which scores each trade against its own entry fill). The DAY SUM is identical; only the per-trade split moves. This is the number you see on the Alpaca position screen.">Alpaca $</th>
           <th class="num">MFE</th><th class="num">MAE</th>
           <th class="num" title="EMA5 slope at the spike — per-minute change of the 5-min EMA over 3 bars (record-only; faster trend read than VWAP slope). Blank if no picture detection matched.">eSl5</th>
           <th class="num" title="EMA10 slope at the spike — per-minute change of the 10-min EMA over 3 bars (record-only).">eSl10</th>
