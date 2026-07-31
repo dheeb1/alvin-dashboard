@@ -141,6 +141,7 @@
       <button class="btn" id="csv-btn" disabled>Download CSV</button>
       <button class="btn" id="xlsx-btn" disabled style="margin-left:6px;">Download XLSX</button>
       <a class="btn" id="tape-csv-btn" href="#" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
+      <button class="btn" id="echo-csv-btn" disabled style="margin-left:6px;">Download Echo CSV</button>
     </div>
   </div>
   <div id="trades-wrap">
@@ -548,6 +549,28 @@
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
+  // 2026-07-31 — echo-guard CSV: the xcross wiggle/fakeout shadow ledger
+  // (snap.echo_guard from the publisher), column-identical to
+  // reports/echo_guard_<date>.csv on the bot box.
+  const ECHO_COLS = ["time_ct", "machine", "mode", "prev_diff", "suspect_diff",
+                     "jump", "state_before", "would_state", "caused_cross",
+                     "resolution", "verdict_for_guard"];
+  function downloadEchoCsv(snap) {
+    const events = (snap?.echo_guard && snap.echo_guard.events) || [];
+    if (!events.length) return;
+    const lines = [ECHO_COLS.join(",")];
+    for (const e of events) lines.push(ECHO_COLS.map(c => csvEscape(e[c])).join(","));
+    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flipper_${snap.session_date || "today"}_echo_guard.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+
   // -------- Styled XLSX export (2026-06-11) --------
   // Same rows/columns as the CSV, but a real .xlsx painted in the dashboard's
   // dark theme: CALL green / PUT red, P&L colored by sign, MFE green, MAE red,
@@ -660,6 +683,26 @@
           if (v != null) w = Math.max(w, String(v).length);
         }
         ws2.getColumn(i + 1).width = Math.min(34, Math.max(8, w + 2));
+      });
+    }
+    // 2026-07-31 — third worksheet: the xcross echo-guard shadow ledger, so
+    // the one XLSX carries trades + experiments + the wiggle/fakeout tags.
+    const echo = (snap?.echo_guard && snap.echo_guard.events) || [];
+    if (echo.length) {
+      const ws3 = wb.addWorksheet("echo_guard", { views: [{ state: "frozen", ySplit: 1 }] });
+      ws3.addTable({
+        name: "EchoGuardTable", ref: "A1", headerRow: true,
+        style: { theme: "TableStyleMedium2", showRowStripes: true },
+        columns: ECHO_COLS.map((c) => ({ name: c, filterButton: true })),
+        rows: echo.map((e) => ECHO_COLS.map((c) => (e[c] === undefined ? null : e[c]))),
+      });
+      ECHO_COLS.forEach((c, i) => {
+        let w = c.length;
+        for (const e of echo) {
+          const v = e[c];
+          if (v != null) w = Math.max(w, String(v).length);
+        }
+        ws3.getColumn(i + 1).width = Math.min(20, Math.max(8, w + 2));
       });
     }
     const buf = await wb.xlsx.writeBuffer();
@@ -1144,6 +1187,10 @@
       renderStats(snap);
       renderOpenPositions(snap);
       renderTrades(snap);
+      // 2026-07-31 — echo CSV is independent of trades (events can exist on a
+      // 0-trade day); enable off its own section.
+      $("echo-csv-btn").disabled =
+        !(snap.echo_guard && snap.echo_guard.events && snap.echo_guard.events.length);
       renderTiContext(snap);
       renderTwoLeg(snap);
       renderExperiments(snap);
@@ -1160,6 +1207,7 @@
     }
   }
   $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
+  $("echo-csv-btn").addEventListener("click", () => { if (lastSnap) downloadEchoCsv(lastSnap); });
   $("xlsx-btn").addEventListener("click", async () => {
     if (!lastSnap) return;
     const btn = $("xlsx-btn");
