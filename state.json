@@ -1,6 +1,6 @@
 {
- "v": 2,
- "generated_at": "2026-08-14T16:30:58",
+ "v": 3,
+ "generated_at": "2026-08-14T17:10:24",
  "market_open": false,
  "components": {
   "server": "up",
@@ -11,12 +11,31 @@
  "account": {
   "equity": 79924.73,
   "day_pl": 0.0,
-  "day_pl_pct": 0.0
+  "day_pl_pct": 0.0,
+  "history": [
+   {
+    "d": "2026-08-14",
+    "eq": 79924.73
+   }
+  ]
+ },
+ "risk_state": {
+  "test_mode": true,
+  "trading_enabled": true,
+  "trading_mode": "PAPER",
+  "august_halted": false
  },
  "august": {
   "mode": "dryrun",
   "enabled": true,
-  "today": "signal: base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE"
+  "today": "base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE",
+  "history": [
+   {
+    "d": "2026-08-14",
+    "mode": "dryrun",
+    "verdict": "base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE"
+   }
+  ]
  },
  "tournament": {
   "signals_today": 5,
@@ -67,6 +86,16 @@
     "tp": null,
     "status": "SIGNAL_RECEIVED",
     "at": "07:39"
+   }
+  ]
+ },
+ "rejects": {
+  "today": 1,
+  "recent": [
+   {
+    "kind": "auth_reject",
+    "detail": "2600:6c40:f00:e2a:568:47c3:a770:155b: invalid or missing token",
+    "at": "13:30"
    }
   ]
  }
