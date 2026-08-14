@@ -7,29 +7,29 @@
 <style>
   :root {
     color-scheme: dark;
-    --page:        #0d0d0d;
-    --surface:     #1a1a19;
+    --page:        #1a35a8;   /* royal blue, deep */
+    --surface:     #2447cf;   /* royal blue, card */
     --ink:         #ffffff;
-    --ink-2:       #c3c2b7;
-    --muted:       #898781;
-    --grid:        #2c2c2a;
-    --ring:        rgba(255,255,255,0.10);
-    --good:        #0ca30c;
-    --warning:     #fab219;
-    --serious:     #ec835a;
-    --critical:    #d03b3b;
-    --up:          #0ca30c;
-    --down:        #e66767;
-    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --ink-2:       #e8edff;
+    --muted:       #b9c6f5;
+    --grid:        rgba(255,255,255,0.22);
+    --ring:        rgba(255,255,255,0.28);
+    --good:        #3ef07f;   /* bright green: all systems go */
+    --warning:     #ffd54a;
+    --serious:     #ffa04d;
+    --critical:    #ff4b4b;   /* bright red: errors */
+    --up:          #3ef07f;
+    --down:        #ff4b4b;
+    --s1: #ffd166; --s2: #ff8c5a; --s3: #55e0d2; --s4: #c6b3ff;
   }
   * { margin: 0; box-sizing: border-box; }
   body {
     background: var(--page); color: var(--ink);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 600 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
     padding: 20px; max-width: 980px; margin: 0 auto;
   }
   header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-  header h1 { font-size: 22px; letter-spacing: 4px; font-weight: 700; }
+  header h1 { font-size: 22px; letter-spacing: 4px; font-weight: 800; }
   header .sub { color: var(--muted); font-size: 13px; }
   .stale { color: var(--warning); }
   .banner {
@@ -46,8 +46,9 @@
     border-radius: 10px; padding: 14px 16px;
   }
   .card h2 { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
-  .big { font-size: 26px; font-weight: 700; }
-  .statusline { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
+  .big { font-size: 26px; font-weight: 800; }
+  .statusline { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 800; }
+  .statusline.is-up { color: var(--good); } .statusline.is-down { color: var(--critical); }
   .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
   .dot.up { background: var(--up); } .dot.down { background: var(--down); }
   .dot.off { background: var(--muted); }
@@ -62,7 +63,7 @@
   th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
   td { padding: 5px 8px; border-bottom: 1px solid var(--grid); color: var(--ink-2); font-variant-numeric: tabular-nums; }
   tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.04); }
+  tr:hover td { background: rgba(255,255,255,0.08); }
   .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
   footer { color: var(--muted); font-size: 12px; margin-top: 8px; }
   .mono { font-variant-numeric: tabular-nums; }
@@ -110,7 +111,7 @@ function tile(title, statusHtml, subHtml) {
 function statusLine(state, label) {
   const cls = state === "up" ? "up" : (state === "disabled" ? "off" : "down");
   const txt = state === "up" ? (label || "UP") : (state === "disabled" ? "disabled" : "DOWN");
-  return `<div class="statusline"><span class="dot ${cls}"></span>${esc(txt)}</div>`;
+  return `<div class="statusline ${cls === "up" ? "is-up" : cls === "down" ? "is-down" : ""}"><span class="dot ${cls}"></span>${esc(txt)}</div>`;
 }
 
 function render(st) {
