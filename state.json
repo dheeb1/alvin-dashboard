@@ -1,0 +1,73 @@
+{
+ "v": 2,
+ "generated_at": "2026-08-14T16:30:58",
+ "market_open": false,
+ "components": {
+  "server": "up",
+  "tunnel": "up",
+  "url_pending": false
+ },
+ "alerts": [],
+ "account": {
+  "equity": 79924.73,
+  "day_pl": 0.0,
+  "day_pl_pct": 0.0
+ },
+ "august": {
+  "mode": "dryrun",
+  "enabled": true,
+  "today": "signal: base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE"
+ },
+ "tournament": {
+  "signals_today": 5,
+  "by_strategy": {
+   "ema9x21_v1": 1,
+   "rotation_test": 1,
+   "shakedown_v1": 1,
+   "bridge_test": 1,
+   "?": 1
+  },
+  "recent": [
+   {
+    "strategy": "ema9x21_v1",
+    "action": "buy",
+    "sl": 0.04975,
+    "tp": 0.09951,
+    "status": "SIGNAL_RECEIVED",
+    "at": "13:45"
+   },
+   {
+    "strategy": "rotation_test",
+    "action": "buy",
+    "sl": 0.01,
+    "tp": 0.02,
+    "status": "SIGNAL_RECEIVED",
+    "at": "13:30"
+   },
+   {
+    "strategy": "shakedown_v1",
+    "action": "sell",
+    "sl": 0.01,
+    "tp": 0.02,
+    "status": "SIGNAL_RECEIVED",
+    "at": "09:35"
+   },
+   {
+    "strategy": "bridge_test",
+    "action": "buy",
+    "sl": 0.01,
+    "tp": 0.02,
+    "status": "SIGNAL_RECEIVED",
+    "at": "07:49"
+   },
+   {
+    "strategy": "?",
+    "action": "buy",
+    "sl": null,
+    "tp": null,
+    "status": "SIGNAL_RECEIVED",
+    "at": "07:39"
+   }
+  ]
+ }
+}

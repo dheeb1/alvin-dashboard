@@ -1,1261 +1,170 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ALVIN · Live Dashboard</title>
+<title>CREED</title>
 <style>
   :root {
-    --bg: #0b0e14;
-    --bg-2: #11161f;
-    --bg-3: #182030;
-    --line: #1f2a3d;
-    --text: #d8dee9;
-    --dim: #7b88a0;
-    --accent: #5cc8ff;
-    --green: #3ddc97;
-    --red: #ff5470;
-    --yellow: #ffcc66;
+    color-scheme: dark;
+    --page:        #0d0d0d;
+    --surface:     #1a1a19;
+    --ink:         #ffffff;
+    --ink-2:       #c3c2b7;
+    --muted:       #898781;
+    --grid:        #2c2c2a;
+    --ring:        rgba(255,255,255,0.10);
+    --good:        #0ca30c;
+    --warning:     #fab219;
+    --serious:     #ec835a;
+    --critical:    #d03b3b;
+    --up:          #0ca30c;
+    --down:        #e66767;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
   }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0; padding: 0; background: var(--bg); color: var(--text);
-    font-family: ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
-    font-size: 14px; line-height: 1.4;
+  * { margin: 0; box-sizing: border-box; }
+  body {
+    background: var(--page); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 20px; max-width: 980px; margin: 0 auto;
   }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 14px 22px; background: var(--bg-2); border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; z-index: 10;
+  header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; letter-spacing: 4px; font-weight: 700; }
+  header .sub { color: var(--muted); font-size: 13px; }
+  .stale { color: var(--warning); }
+  .banner {
+    border: 1px solid var(--ring); border-left: 4px solid var(--critical);
+    background: var(--surface); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;
   }
-  header h1 { margin: 0; font-size: 16px; letter-spacing: 1px; color: var(--accent); }
-  header h1 span.session { color: var(--dim); margin-left: 10px; font-weight: normal; }
-  .pill {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 10px; border-radius: 999px; background: var(--bg-3);
-    font-size: 12px; color: var(--dim); border: 1px solid var(--line);
-  }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
-  .dot.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
-  .dot.off { background: var(--red); }
-  .grid {
-    display: grid; gap: 14px; padding: 18px 22px;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  }
+  .banner div { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+  .banner .lvl { font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+  .lvl.critical { color: var(--critical); } .lvl.serious { color: var(--serious); }
+  .lvl.warning { color: var(--warning); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 16px; }
   .card {
-    background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px;
-    padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--ring);
+    border-radius: 10px; padding: 14px 16px;
   }
-  .card .label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.8px; }
-  .card .value { font-size: 22px; margin-top: 6px; font-weight: 600; }
-  .card .sub { font-size: 11px; color: var(--dim); margin-top: 4px; }
-  .green { color: var(--green); }
-  .red { color: var(--red); }
-  .yellow { color: var(--yellow); }
-  section { padding: 0 22px 24px; }
-  section h2 { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin: 18px 0 10px; }
-  table {
-    width: 100%; border-collapse: collapse; background: var(--bg-2);
-    border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
-    font-size: 13px;
-  }
-  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
-  th { background: var(--bg-3); color: var(--dim); font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .card h2 { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; }
+  .big { font-size: 26px; font-weight: 700; }
+  .statusline { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 600; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .dot.up { background: var(--up); } .dot.down { background: var(--down); }
+  .dot.off { background: var(--muted); }
+  .sub2 { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+  .pl-pos { color: var(--good); } .pl-neg { color: var(--down); }
+  section.block { background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+  section.block h2 { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .tag { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ring); border-radius: 999px; padding: 3px 10px; font-size: 13px; color: var(--ink-2); }
+  .tag .dot { width: 8px; height: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-weight: 600; padding: 4px 8px; border-bottom: 1px solid var(--grid); }
+  td { padding: 5px 8px; border-bottom: 1px solid var(--grid); color: var(--ink-2); font-variant-numeric: tabular-nums; }
   tr:last-child td { border-bottom: none; }
-  td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  .side-CALL { color: var(--green); font-weight: 600; }
-  .side-PUT { color: var(--red); font-weight: 600; }
-  .empty { padding: 24px; text-align: center; color: var(--dim); }
-  .scroll-x { overflow-x: auto; }
-  .verdict-CALL { color: var(--green); }
-  .verdict-PUT { color: var(--red); }
-  .verdict-CONT { color: var(--accent); }
-  .verdict-ABS_OVER { color: var(--yellow); }
-  .verdict-ABS_STUCK { color: var(--dim); }
-  .calc-MATCH    { color: var(--green); font-weight: 600; }
-  .calc-OPPOSITE { color: var(--red); font-weight: 700; background: rgba(255,80,80,0.10); }
-  .calc-NONE     { color: var(--dim); }
-  .picker-high   { color: var(--green); font-weight: 700; }
-  .picker-low    { color: var(--dim); }
-  .stacked-pass  { background: rgba(80,200,120,0.10); }
-  .star          { color: var(--accent); font-weight: 700; }
-  .watch-strip   { padding: 6px 8px; background: var(--bg-3); border-radius: 4px; margin-bottom: 6px; font-size: 11px; }
-  .watch-strip strong { color: var(--text); }
-  .section-head { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 10px; }
-  .section-head h2 { margin: 0; }
-  .btn {
-    background: var(--bg-3); color: var(--text);
-    border: 1px solid var(--line); border-radius: 6px;
-    padding: 6px 12px; font-family: inherit; font-size: 12px;
-    cursor: pointer; transition: background 0.15s;
-  }
-  .btn:hover { background: var(--line); border-color: var(--accent); color: var(--accent); }
-  .btn:active { transform: translateY(1px); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .ratio-low { color: var(--red); }
-  .ratio-mid { color: var(--yellow); }
-  .ratio-hi  { color: var(--green); }
-  .dim-num   { color: var(--dim); }
-  footer {
-    padding: 14px 22px; color: var(--dim); font-size: 11px; text-align: right;
-    border-top: 1px solid var(--line); background: var(--bg-2);
-  }
-  .tiny { font-size: 11px; color: var(--dim); }
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  tr:hover td { background: rgba(255,255,255,0.04); }
+  .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .mono { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
 <header>
-  <h1>ALVIN <span class="session" id="session-date">—</span></h1>
-  <div class="row">
-    <span class="pill" id="mode-pill"><span class="dot"></span><span id="mode-text">…</span></span>
-    <span class="pill" id="status-pill"><span class="dot" id="status-dot"></span><span id="status-text">connecting…</span></span>
-    <!-- 2026-05-20 — AVI pill replaces the IVA pill. Shows A / V / |I| with
-         armed/fired state per rule (TREND, FADE). -->
-    <!-- 2026-06-11 — automated pre-flight (preflight_check.py, re-runs on
-         every bot start). PASS/WARN/FAIL on: PID alive, stale-code scan,
-         live_vs_modes, dual-instance, publisher, claude CLI login. -->
-    <span class="pill" id="preflight-pill" style="display:none" title=""><span id="preflight-text">—</span></span>
-    <span class="pill" id="avi-pill" style="display:none"><span id="avi-text">—</span></span>
-    <span class="pill" id="regime-pill" style="display:none"><span id="regime-text">—</span></span>
-    <span class="pill"><span id="last-update">—</span></span>
-  </div>
+  <h1>CREED</h1>
+  <span class="sub" id="gen">loading…</span>
+  <span class="sub" id="mkt"></span>
 </header>
 
-<section>
-  <h2>Today</h2>
-  <div class="grid" id="stat-grid"></div>
+<div id="banner" class="banner" style="display:none"></div>
+
+<div class="grid" id="tiles"></div>
+
+<section class="block">
+  <h2>AUGUST — 0DTE bot</h2>
+  <div id="august" class="sub2">—</div>
 </section>
 
-<section>
-  <h2>Open Positions <span class="tiny" id="open-count"></span></h2>
-  <div id="open-wrap">
-    <div class="empty">—</div>
-  </div>
-</section>
-
-<section>
-  <div class="section-head">
-    <h2>Trades Today</h2>
-    <div>
-      <button class="btn" id="csv-btn" disabled>Download CSV</button>
-      <button class="btn" id="xlsx-btn" disabled style="margin-left:6px;">Download XLSX</button>
-      <a class="btn" id="tape-csv-btn" href="#" style="text-decoration:none;display:inline-block;margin-left:6px;">Download Tape CSV</a>
-      <button class="btn" id="echo-csv-btn" disabled style="margin-left:6px;">Download Echo CSV</button>
-    </div>
-  </div>
-  <div id="trades-wrap">
-    <div class="empty">loading…</div>
-  </div>
-</section>
-
-<!-- 2026-06-02 — TI Context (observation-only). MACD/VWAP/RSI/BB/ORB story-tag
-     at each fire. Falsifiable claim: does MIDDLE_NOISE/MIXED concentrate losers
-     vs TREND_WITH / REVERSAL_*? Hidden until the table has rows. -->
-<section id="ti-section" style="display:none">
-  <h2>TI Context · by story tag <span class="tiny" id="ti-total"></span></h2>
-  <div id="ti-tag-wrap"><div class="empty">—</div></div>
-  <h2 style="margin-top:18px">Edge-hunt pilot tags <span class="tiny">· record-only sizing overlay (2026-06-10)</span></h2>
-  <div id="ti-pilot-wrap"><div class="empty">—</div></div>
-  <h2 style="margin-top:18px">TI Context · today's fires</h2>
-  <div id="ti-today-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-06-10 — TWO-LEG paper model (SCALP strict-TP-21 + RUNNER wide-cushion).
-     The judgment number is "RUNNER − SCALP": what the wide leg adds (or costs)
-     per pair vs banking the first floor. Hidden until pairs exist. -->
-<section id="two-leg-section" style="display:none">
-  <h2>Two-leg paper · SCALP vs RUNNER <span class="tiny">· 2 contracts/entry, paper-only (2026-06-10)</span></h2>
-  <div id="two-leg-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-06-11 — Experiment scoreboard. One row per running forward judgment
-     (registry: experiments.json, math: dashboard_publisher.load_experiments).
-     Sessions are the effective n; H1/H2 is a PREVIEW split shown at >=6
-     sessions; JUDGE NOW at day 14 means "run the real study", not a verdict.
-     Hidden until the publisher ships the experiments block. -->
-<section id="exp-section" style="display:none">
-  <h2>Experiments <span class="tiny">· forward-judgment scoreboard · n = sessions · H1/H2 preview at ≥6 sessions</span></h2>
-  <div id="exp-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-06-11 — Nightly auto-debrief. nightly_debrief.py runs at ~15:10 CT
-     (publisher-triggered), classifies the day's losers via post-exit QQQ
-     path, flags stacked-fire clusters, scores the CLAUDE refusals, and
-     narrates 3-5 lessons (claude -p, debrief_prompt.md frozen policy).
-     Full report: reports/debrief_<date>.md. Hidden until the first run. -->
-<section id="debrief-section" style="display:none">
-  <h2>Daily Debrief <span class="tiny" id="debrief-meta"></span></h2>
-  <div id="debrief-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-06-11 — Friday weekly digest. weekly_digest.py rolls the week's
-     sessions + daily debriefs into one read (publisher-triggered Friday
-     >=15:25 CT): week-over-week lanes, hourly bleed, experiment trajectory,
-     rolling-20 live expectancy. Full report: reports/weekly_<date>.md. -->
-<section id="weekly-section" style="display:none">
-  <h2>Weekly Digest <span class="tiny" id="weekly-meta"></span></h2>
-  <div id="weekly-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-06-11 — judge-day draft verdicts. judge_day.py auto-runs the
-     mechanical 0-for-20 battery when an experiment clock hits day 14
-     (publisher-triggered >=15:15 CT). DRAFTS: the interactive edge-skeptic
-     confound pass + David's ship/kill call stay human. Full briefs:
-     reports/judgment_<id>_<date>.md. -->
-<section id="judgment-section" style="display:none">
-  <h2>Judge-day Drafts <span class="tiny" id="judgment-meta"></span></h2>
-  <div id="judgment-wrap"><div class="empty">—</div></div>
-</section>
-
-<!-- 2026-07-06 — PICTURE DECISIONS (record-only, paper). The per-entry "why"
-     for the SPIKE_PICTURE lanes: the model verdict + the four choir votes
-     (slope/RSI/MACD/BB) + the dip-vs-chase LOCATION of each entry (David's
-     slope=direction / z=location thesis — a CALL bought at the extended TOP is
-     a chase, a CALL bought on a DIP is a ride). Data: recorders.db
-     picture_entry_decisions via dashboard_publisher.load_picture_decisions.
-     Reasoning only — NO P&L (outcomes live in the ledger + the nightly race).
-     Hidden until the first picture entry (07-07 boot). -->
-<section id="picdec-section" style="display:none">
-  <h2>Picture Decisions <span class="tiny">· singer + choir + dip/chase · record-only, paper (2026-07-06)</span></h2>
-  <div id="picdec-summary" class="grid"></div>
-  <div id="picdec-regime-wrap" style="margin-top:12px"></div>
-  <div id="picdec-rows-wrap" style="margin-top:12px"><div class="empty">—</div></div>
+<section class="block">
+  <h2>Signal tournament — today</h2>
+  <div class="tags" id="tags"></div>
+  <div id="signals"></div>
 </section>
 
 <footer>
-  <span id="generated-at">—</span> · auto-refresh every 10s ·
-  <a href="?src=local" style="color:var(--dim)">local mode</a>
+  Paper account · TEST_MODE tournament · auto-refresh 60s · generated by CREED publisher · not financial advice
 </footer>
 
 <script>
-  // -------- Configuration --------
-  // Set this to your gist's raw URL after creating the gist.
-  // Format: https://gist.githubusercontent.com/<USER>/<GIST_ID>/raw/state.json
-  const GIST_RAW_URL = "https://gist.githubusercontent.com/dheeb1/fecd5b57d51c7c8f04b8a866c03809cf/raw/state.json";
-  const LOCAL_URL = "data/state.json";
-  // 2026-05-18 PM — per-tick tape CSV lives in the same gist, separate file.
-  // Publisher pushes both alongside each cycle.
-  // 2026-05-19 — CSV expanded from 15 → 25 cols: added imb_3m/abs_3m/vol_3m,
-  // 1m+3m sums, sum-bursts, and renamed IVA_burst → IVA_1m (was always a
-  // level not a burst) plus new IVA_sum. Data-collection only — bot still
-  // trades on IVA_ABS gate; sum cols are smoothing experiments for later.
-  const GIST_TAPE_CSV_URL = GIST_RAW_URL.replace(/\/raw\/state\.json.*$/, "/raw/tick_tape_today.csv");
-  const LOCAL_TAPE_CSV_URL = "data/tick_tape_today.csv";
-  const REFRESH_MS = 10_000;
+// If a gist is configured, put its RAW url here; otherwise the page reads a
+// sibling state.json (works for local previews and if the publisher commits
+// to the Pages repo directly).
+const GIST_RAW_URL = "";  // e.g. https://gist.githubusercontent.com/<user>/<id>/raw/state.json
+const SRC = GIST_RAW_URL || "state.json";
 
-  // ?src=local → load from data/state.json (publisher writes one locally),
-  // ?src=sample → load sample_data.json
-  // default → use GIST_RAW_URL
-  function dataUrl() {
-    const p = new URLSearchParams(location.search).get("src");
-    if (p === "local") return LOCAL_URL;
-    if (p === "sample") return "sample_data.json";
-    return GIST_RAW_URL.includes("REPLACE_WITH") ? "sample_data.json" : GIST_RAW_URL;
-  }
-  function tapeCsvUrl() {
-    const p = new URLSearchParams(location.search).get("src");
-    if (p === "local") return LOCAL_TAPE_CSV_URL;
-    return GIST_TAPE_CSV_URL;
-  }
+const STRAT_COLORS = { shakedown_v1: "var(--s1)", vwap_v1: "var(--s2)", ema9x21_v1: "var(--s3)", orb15_v1: "var(--s4)" };
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-  // -------- Helpers --------
-  const $ = (id) => document.getElementById(id);
-  const fmtPct = (v) => (v == null ? "—" : (v >= 0 ? "+" : "") + v.toFixed(2) + "%");
-  const fmtPctCls = (v) => v == null ? "" : v > 0 ? "green" : v < 0 ? "red" : "";
-  const fmtPrice = (v) => v == null ? "—" : "$" + Number(v).toFixed(2);
-  // 2026-05-15 — dollar P&L. Signed with no cents on totals; cents kept on
-  // per-trade rows so small tape-mid wiggles ($0.50 type) don't round to zero.
-  const fmtDollars = (v, cents = true) => {
-    if (v == null) return "—";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "—";
-    const sign = n > 0 ? "+" : n < 0 ? "-" : "";
-    const abs = Math.abs(n);
-    return sign + "$" + (cents ? abs.toFixed(2) : Math.round(abs).toString());
-  };
-  const fmtTime = (iso) => {
-    if (!iso) return "—";
-    try { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }); }
-    catch { return iso; }
-  };
-  const fmtDur = (sec) => {
-    if (sec == null) return "—";
-    if (sec < 60) return sec.toFixed(0) + "s";
-    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
-    return `${m}m${s.toString().padStart(2, "0")}s`;
-  };
+function tile(title, statusHtml, subHtml) {
+  return `<div class="card"><h2>${title}</h2>${statusHtml}${subHtml ? `<div class="sub2">${subHtml}</div>` : ""}</div>`;
+}
+function statusLine(state, label) {
+  const cls = state === "up" ? "up" : (state === "disabled" ? "off" : "down");
+  const txt = state === "up" ? (label || "UP") : (state === "disabled" ? "disabled" : "DOWN");
+  return `<div class="statusline"><span class="dot ${cls}"></span>${esc(txt)}</div>`;
+}
 
-  function modeText(bot) {
-    if (!bot) return ["…", ""];
-    const live = (bot.live_trade_types || []).length > 0;
-    const win = (bot.trading_windows || [])
-      .map(w => `${w.start_time || w.start}-${w.end_time || w.end}`)
-      .filter(s => s !== "undefined-undefined")
-      .join(",");
-    if (live) {
-      return [`LIVE ${bot.live_trade_types.join(",")}${win ? " @ " + win : ""}`, "yellow"];
-    }
-    const paperTypes = bot.paper_full_session_types || [];
-    if (paperTypes.length) return [`PAPER ${paperTypes.join(",")}`, ""];
-    return ["PAPER", ""];
-  }
+function render(st) {
+  const gen = new Date(st.generated_at);
+  const ageMin = (Date.now() - gen.getTime()) / 60000;
+  document.getElementById("gen").innerHTML =
+    `updated ${gen.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}` +
+    (ageMin > 15 ? ` <span class="stale">⚠ ${Math.round(ageMin)} min old</span>` : "");
+  document.getElementById("mkt").textContent =
+    st.market_open === true ? "· market OPEN" : st.market_open === false ? "· market closed" : "";
 
-  function renderStats(snap) {
-    const s = snap.stats_today || {};
-    const sumCls = s.sum_pnl_pct > 0 ? "green" : s.sum_pnl_pct < 0 ? "red" : "";
-    const wrCls = s.win_rate_pct >= 60 ? "green" : s.win_rate_pct < 50 ? "red" : "";
-    // 2026-05-15 — $ P&L wired in (NET of commission). Day P&L card leads
-    // with the real-money net; subtitle shows gross / commission / W-L so the
-    // math is auditable. Avg Win / Loss / Best / Worst show $ underneath %
-    // (also NET — winners shrink by $1.60, losers grow by $1.60 vs gross).
-    const grossSub = (s.sum_pnl_dollars_gross != null && s.commission_total_dollars != null)
-      ? ` (gross ${fmtDollars(s.sum_pnl_dollars_gross, false)} − ${fmtDollars(s.commission_total_dollars, false).replace("-","").replace("+","")} comm)`
-      : "";
-    // 2026-07-31 — Alpaca-lens cross-check: the same day total re-attributed
-    // the way the Alpaca position screen books it (average cost). Equal to
-    // gross when every round trip is closed — a visible mismatch means an
-    // open position or a mirror fill gap.
-    const lensSub = (s.sum_alpaca_realized_dollars != null)
-      ? ` · Alpaca lens ${fmtDollars(s.sum_alpaca_realized_dollars, false)}`
-      : "";
-    const cards = [
-      { label: "Day P&L (net)", value: fmtDollars(s.sum_pnl_dollars, false), cls: sumCls,
-        sub: `${fmtPct(s.sum_pnl_pct)} · ${s.wins}W · ${s.losses}L · ${s.trades_today} trades${grossSub}${lensSub}` },
-      { label: "Win Rate", value: (s.win_rate_pct || 0).toFixed(0) + "%", cls: wrCls },
-      { label: "Commission", value: fmtDollars(s.commission_total_dollars ? -Math.abs(s.commission_total_dollars) : 0, false),
-        cls: "yellow",
-        sub: `${s.trades_today || 0} trades × round-trip` },
-      { label: "Avg Win", value: fmtPct(s.avg_win_pct), cls: "green",
-        sub: fmtDollars(s.avg_win_dollars) },
-      { label: "Avg Loss", value: fmtPct(s.avg_loss_pct), cls: "red",
-        sub: fmtDollars(s.avg_loss_dollars) },
-      { label: "Best", value: fmtPct(s.best_pct), cls: "green",
-        sub: fmtDollars(s.best_dollars) },
-      { label: "Worst", value: fmtPct(s.worst_pct), cls: "red",
-        sub: fmtDollars(s.worst_dollars) },
-    ];
-    $("stat-grid").innerHTML = cards.map(c =>
-      `<div class="card">
-         <div class="label">${c.label}</div>
-         <div class="value ${c.cls || ""}">${c.value}</div>
-         ${c.sub ? `<div class="sub">${c.sub}</div>` : ""}
-       </div>`
-    ).join("");
-  }
+  const banner = document.getElementById("banner");
+  if (st.alerts && st.alerts.length) {
+    banner.style.display = "";
+    banner.innerHTML = st.alerts.map(a =>
+      `<div><span class="lvl ${esc(a.level)}">${esc(a.level).toUpperCase()}</span><span>${esc(a.msg)}</span></div>`).join("");
+  } else banner.style.display = "none";
 
-  function renderOpenPositions(snap) {
-    const positions = snap.open_positions || [];
-    $("open-count").textContent = positions.length ? `· ${positions.length}` : "";
-    if (!positions.length) {
-      $("open-wrap").innerHTML = `<div class="empty">No open positions.</div>`;
-      return;
-    }
-    const rows = positions.map(p => {
-      const sideClass = p.side === "CALL" ? "side-CALL" : p.side === "PUT" ? "side-PUT" : "";
-      const pnlCls = fmtPctCls(p.unrealized_pnl_pct);
-      // 2026-06-26 — live give-back indicator. Peak % = best unrealized % so far
-      // (from high_price); Off Peak = how far below that high-water mark we are
-      // right now. "bleeding" flags a real winner (peak >= +15%) that has handed
-      // back >= 10 points — the exact watch-it-live case to catch in real time.
-      const peakPct = (p.entry_price && p.high_price)
-        ? (p.high_price / p.entry_price - 1) * 100 : null;
-      const offPeak = (peakPct != null && p.unrealized_pnl_pct != null)
-        ? (p.unrealized_pnl_pct - peakPct) : null;
-      const bleeding = (peakPct != null && peakPct >= 15 && offPeak != null && offPeak <= -10);
-      return `<tr>
-        <td>${fmtTime(p.entry_time_iso)}</td>
-        <td>${p.underlying || ""} <strong class="${sideClass}">${p.side || p.direction || ""}</strong> ${p.strike ?? ""}</td>
-        <td class="num">${fmtPrice(p.entry_price)}</td>
-        <td class="num">${fmtPrice(p.last_price)}</td>
-        <td class="num ${pnlCls}">${fmtPct(p.unrealized_pnl_pct)}</td>
-        <td class="num ${pnlCls}">${fmtDollars(p.unrealized_pnl_dollars)}</td>
-        <td class="num">${fmtPrice(p.high_price)}</td>
-        <td class="num ${fmtPctCls(peakPct)}">${fmtPct(peakPct)}</td>
-        <td class="num ${bleeding ? 'red' : 'dim-num'}">${fmtPct(offPeak)}${bleeding ? ' ⚠' : ''}</td>
-        <td class="num">${fmtDur(p.hold_sec)}</td>
-      </tr>`;
-    }).join("");
-    $("open-wrap").innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Opened</th><th>Contract</th>
-          <th class="num">Entry $</th><th class="num">Last $</th>
-          <th class="num">Unreal %</th><th class="num">Unreal $</th>
-          <th class="num">Peak $</th>
-          <th class="num">Peak %</th>
-          <th class="num">Off Peak</th>
-          <th class="num">Held</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
+  const acct = st.account || {};
+  const pl = acct.day_pl, plCls = pl > 0 ? "pl-pos" : pl < 0 ? "pl-neg" : "";
+  const plTxt = pl == null ? "—" : `${pl >= 0 ? "+" : "−"}$${Math.abs(pl).toFixed(2)}`;
+  const plPct = acct.day_pl_pct == null ? "" : ` (${acct.day_pl_pct >= 0 ? "+" : ""}${acct.day_pl_pct}%)`;
+  document.getElementById("tiles").innerHTML =
+    tile("Server", statusLine(st.components?.server)) +
+    tile("Tunnel", statusLine(st.components?.tunnel), st.components?.url_pending ? "URL re-point pending" : "") +
+    tile("Paper equity", `<div class="big mono">${acct.equity != null ? "$" + acct.equity.toLocaleString(undefined, {minimumFractionDigits: 2}) : "—"}</div>`) +
+    tile("Day P/L", `<div class="big mono ${plCls}">${plTxt}</div>`, plPct.trim());
 
-  function fmtStreak(side, count) {
-    if (!side || count == null) return `<span class="tiny">—</span>`;
-    return `<span class="${streakClass(side)}">${side[0]}/${count}</span>`;
-  }
+  const aug = st.august || {};
+  document.getElementById("august").innerHTML =
+    `<span class="tag"><span class="dot ${aug.enabled ? "up" : "off"}"></span>${aug.enabled ? "enabled" : "disabled"} · mode: ${esc(aug.mode)}</span>` +
+    `<div class="sub2" style="margin-top:8px">${esc(aug.today)}</div>`;
 
-  function renderTrades(snap) {
-    // 2026-05-20 — Route column highlights AVI_TREND / AVI_FADE trades.
-    const trades = snap.trades_today || [];
-    if (!trades.length) {
-      $("trades-wrap").innerHTML = `<div class="empty">No trades yet today.</div>`;
-      $("csv-btn").disabled = true;
-      $("xlsx-btn").disabled = true;
-      return;
-    }
-    $("csv-btn").disabled = false;
-    $("xlsx-btn").disabled = false;
-    const rows = trades.map(t => {
-      const sideClass = t.side === "CALL" ? "side-CALL" : t.side === "PUT" ? "side-PUT" : "";
-      const pnlCls = fmtPctCls(t.pnl_pct);
-      const isAvi = (t.route === "AVI_TREND" || t.route === "AVI_FADE");
-      const routeCls = isAvi ? "star" : "dim-num";
-      // 2026-07-13 — record-only EMA slopes (per-min change of the 5/10/15 EMA
-      // at the spike), joined from the picture tagger by trade_id. NULL on rows
-      // with no matching spike_picture_fires detection. Gates nothing.
-      const bd = t.breakdown || {};
-      return `<tr>
-        <td>${fmtTime(t.entry_time_iso)}</td>
-        <td>${fmtTime(t.exit_time_iso)}</td>
-        <td>${t.underlying || ""} <strong class="${sideClass}">${t.side || t.direction || ""}</strong> ${t.strike ?? ""}</td>
-        <td class="num">${t.ribbon_ema ?? ""}</td>
-        <td class="${routeCls}">${t.route || "—"}</td>
-        <td class="num">${fmtPrice(t.entry_price)}</td>
-        <td class="num">${fmtPrice(t.exit_price)}</td>
-        <td class="num ${pnlCls}">${fmtPct(t.pnl_pct)}</td>
-        <td class="num ${pnlCls}">${fmtDollars(t.pnl_dollars)}</td>
-        <td class="num ${fmtPctCls(t.alpaca_realized_dollars)}">${fmtDollars(t.alpaca_realized_dollars)}</td>
-        <td class="num green">${fmtPct(t.mfe_pct)}</td>
-        <td class="num red">${fmtPct(t.mae_pct)}</td>
-        <td class="num ${slopeCls(bd.pic_ema_slope5)}">${fmtSlope(bd.pic_ema_slope5)}</td>
-        <td class="num ${slopeCls(bd.pic_ema_slope10)}">${fmtSlope(bd.pic_ema_slope10)}</td>
-        <td class="num ${slopeCls(bd.pic_ema_slope15)}">${fmtSlope(bd.pic_ema_slope15)}</td>
-        <td class="num">${fmtDur(t.hold_sec)}</td>
-        <td class="tiny">${t.exit_reason || ""}</td>
-      </tr>`;
-    }).join("");
-    $("trades-wrap").innerHTML = `
-      <table>
-        <thead><tr>
-          <th>Entry</th><th>Exit</th><th>Contract</th>
-          <th class="num" title="Flip-ribbon EMA period (6/9/12/30) — which tick-EMA machine opened this trade (FLIP_RIBBON_&lt;n&gt;). Blank for non-ribbon lanes.">EMA</th>
-          <th>Route</th>
-          <th class="num">Entry $</th><th class="num">Exit $</th>
-          <th class="num">P&L %</th><th class="num">P&L $</th>
-          <th class="num" title="What the Alpaca account booked when this trade's contract sold — average-cost attribution, so overlapping trades on the same contract split the money differently than P&L $ (which scores each trade against its own entry fill). The DAY SUM is identical; only the per-trade split moves. This is the number you see on the Alpaca position screen.">Alpaca $</th>
-          <th class="num">MFE</th><th class="num">MAE</th>
-          <th class="num" title="EMA5 slope at the spike — per-minute change of the 5-min EMA over 3 bars (record-only; faster trend read than VWAP slope). Blank if no picture detection matched.">eSl5</th>
-          <th class="num" title="EMA10 slope at the spike — per-minute change of the 10-min EMA over 3 bars (record-only).">eSl10</th>
-          <th class="num" title="EMA15 slope at the spike — per-minute change of the 15-min EMA over 3 bars (record-only).">eSl15</th>
-          <th class="num">Held</th>
-          <th>Reason</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table>`;
-  }
+  const t = st.tournament || {};
+  const tags = Object.entries(t.by_strategy || {}).map(([k, v]) =>
+    `<span class="tag"><span class="dot" style="background:${STRAT_COLORS[k] || "var(--muted)"}"></span>${esc(k)} · ${v}</span>`).join("");
+  document.getElementById("tags").innerHTML =
+    `<span class="tag">signals today · <b>&nbsp;${t.signals_today ?? 0}</b></span>` + tags;
+  document.getElementById("signals").innerHTML = (t.recent && t.recent.length)
+    ? `<table><tr><th>time</th><th>strategy</th><th>action</th><th>sl</th><th>tp</th><th>status</th></tr>` +
+      t.recent.map(r => `<tr><td>${esc(r.at)}</td><td><span class="dot" style="background:${STRAT_COLORS[r.strategy] || "var(--muted)"};display:inline-block;margin-right:6px"></span>${esc(r.strategy)}</td><td>${esc(r.action)}</td><td>${r.sl ?? ""}</td><td>${r.tp ?? ""}</td><td>${esc(r.status)}</td></tr>`).join("") + `</table>`
+    : `<div class="empty">No signals yet today.</div>`;
+}
 
-  // -------- Breakdown table (AVI inputs at entry) --------
-  // 2026-05-20 — Per AVI trade we show: A / V / |I| at entry (the three filter
-  // values), direction source ("imb_<flow_tf>" for TREND, INVERT_imb_1m for
-  // FADE), active-consensus state, and PnL. 2026-05-28 — lens-aware: under
-  // SHIFT (5_10_15) the AVI pill shows 1m/5m/15m + cons_5_10_15; under BASE
-  // (6_9_12) it shows 1m/6m/12m + cons_6_9_12.
-  function fmtInt(v) {
-    if (v == null) return "—";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "—";
-    const sign = n > 0 ? "+" : "";
-    return sign + Math.round(n).toLocaleString();
+async function load() {
+  try {
+    const r = await fetch(SRC + (SRC.includes("?") ? "&" : "?") + "t=" + Date.now(), {cache: "no-store"});
+    render(await r.json());
+  } catch (e) {
+    document.getElementById("gen").innerHTML = `<span class="stale">⚠ cannot load state.json</span>`;
   }
-  function fmtFloat(v, dp = 2) {
-    if (v == null) return "—";
-    const n = Number(v);
-    return Number.isFinite(n) ? n.toFixed(dp) : "—";
-  }
-  // 2026-07-13 — EMA slope formatting: signed, 3dp; color by sign like P&L.
-  function fmtSlope(v) {
-    if (v == null) return "—";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "—";
-    return (n > 0 ? "+" : "") + n.toFixed(3);
-  }
-  function slopeCls(v) {
-    if (v == null) return "";
-    const n = Number(v);
-    if (!Number.isFinite(n)) return "";
-    return n > 0 ? "green" : n < 0 ? "red" : "";
-  }
-  // -------- CSV export --------
-  // Flatten one trade (top-level + breakdown.*) into a single row dict
-  function flattenTrade(t) {
-    const flat = {};
-    for (const k of Object.keys(t)) {
-      if (k === "breakdown") continue;
-      flat[k] = t[k];
-    }
-    if (t.breakdown) {
-      for (const k of Object.keys(t.breakdown)) {
-        flat[k] = t.breakdown[k];
-      }
-    }
-    return flat;
-  }
-  function csvEscape(v) {
-    if (v == null) return "";
-    const s = String(v);
-    if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-    return s;
-  }
-  // Union of all keys across flattened trades, preserving first-seen order.
-  // Shared by the CSV and XLSX exports so both emit identical columns.
-  // Columns that are blank (null/undefined/"") in EVERY row are dropped — the
-  // export carries only columns that hold data (2026-07-10: kills the ~40
-  // permanently-empty AR..CF columns). A value of 0/false counts as data.
-  function flattenAllTrades(trades) {
-    const flats = trades.map(flattenTrade);
-    const seen = new Set();
-    const cols = [];
-    for (const r of flats) {
-      for (const k of Object.keys(r)) {
-        if (!seen.has(k)) { seen.add(k); cols.push(k); }
-      }
-    }
-    const isBlank = (v) => v == null || v === "";
-    const nonEmptyCols = cols.filter(
-      (c) => flats.some((r) => !isBlank(r[c])));
-    return { cols: nonEmptyCols, flats };
-  }
-  function buildCsv(trades) {
-    if (!trades.length) return "";
-    const { cols, flats } = flattenAllTrades(trades);
-    const lines = [cols.join(",")];
-    for (const r of flats) lines.push(cols.map(c => csvEscape(r[c])).join(","));
-    return lines.join("\r\n");
-  }
-  function downloadCsv(snap) {
-    const trades = snap?.trades_today || [];
-    if (!trades.length) return;
-    const csv = buildCsv(trades);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `flipper_${snap.session_date || "today"}_trade_breakdown.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  // 2026-07-31 — echo-guard CSV: the xcross wiggle/fakeout shadow ledger
-  // (snap.echo_guard from the publisher), column-identical to
-  // reports/echo_guard_<date>.csv on the bot box.
-  const ECHO_COLS = ["time_ct", "machine", "mode", "prev_diff", "suspect_diff",
-                     "jump", "state_before", "would_state", "caused_cross",
-                     "resolution", "verdict_for_guard"];
-  function downloadEchoCsv(snap) {
-    const events = (snap?.echo_guard && snap.echo_guard.events) || [];
-    if (!events.length) return;
-    const lines = [ECHO_COLS.join(",")];
-    for (const e of events) lines.push(ECHO_COLS.map(c => csvEscape(e[c])).join(","));
-    const blob = new Blob([lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `flipper_${snap.session_date || "today"}_echo_guard.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  // -------- Styled XLSX export (2026-06-11) --------
-  // Same rows/columns as the CSV, but a real .xlsx painted in the dashboard's
-  // dark theme: CALL green / PUT red, P&L colored by sign, MFE green, MAE red,
-  // story_tag buckets, frozen header + autofilter. ExcelJS is lazy-loaded from
-  // CDN on first click so the dashboard itself loads nothing extra.
-  let _exceljsPromise = null;
-  function loadExcelJS() {
-    if (window.ExcelJS) return Promise.resolve();
-    if (!_exceljsPromise) {
-      _exceljsPromise = new Promise((resolve, reject) => {
-        const s = document.createElement("script");
-        s.src = "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js";
-        s.onload = resolve;
-        s.onerror = () => { _exceljsPromise = null; reject(new Error("ExcelJS CDN load failed")); };
-        document.head.appendChild(s);
-      });
-    }
-    return _exceljsPromise;
-  }
-  // Dashboard palette as ARGB (matches :root CSS vars).
-  const XC = {
-    bg: "FF11161F", bgHead: "FF182030", line: "FF1F2A3D",
-    text: "FFD8DEE9", dim: "FF7B88A0", accent: "FF5CC8FF",
-    green: "FF3DDC97", red: "FFFF5470", yellow: "FFFFCC66",
-  };
-  // Mirror of the dashboard's coloring rules, keyed on column name + value.
-  // Returns { color, bold } or null for the default text color.
-  function xlsxCellColor(col, v) {
-    if (v == null || v === "") return null;
-    const c = col.toLowerCase();
-    const s = String(v).toUpperCase();
-    // side-CALL / side-PUT (side, direction, trade_type, claude_verdict, ...)
-    if (/(^|_)(side|direction|verdict)($|_)/.test(c) || c === "trade_type") {
-      if (s.includes("CALL")) return { color: XC.green, bold: true };
-      if (s.includes("PUT")) return { color: XC.red, bold: true };
-    }
-    if (c === "route") {
-      return s.startsWith("AVI") ? { color: XC.accent, bold: true } : { color: XC.dim };
-    }
-    if (c.includes("mfe")) return { color: XC.green };
-    if (c.includes("mae")) return { color: XC.red };
-    if (c.includes("pnl")) {
-      const n = Number(v);
-      if (Number.isFinite(n) && n !== 0) return { color: n > 0 ? XC.green : XC.red };
-      return null;
-    }
-    if (c === "story_tag") { // tagClass()
-      if (s === "MIDDLE_NOISE" || s === "MIXED") return { color: XC.yellow };
-      if (s === "TREND_WITH" || s.startsWith("REVERSAL")) return { color: XC.green };
-      return { color: XC.dim };
-    }
-    if (c === "leg") {
-      if (s === "SCALP") return { color: XC.accent };
-      if (s === "RUNNER") return { color: XC.yellow };
-    }
-    if (c === "exit_reason" || c === "flow_story") return { color: XC.dim };
-    return null;
-  }
-  async function downloadXlsx(snap) {
-    const trades = snap?.trades_today || [];
-    if (!trades.length) return;
-    await loadExcelJS();
-    const { cols, flats } = flattenAllTrades(trades);
-    const wb = new ExcelJS.Workbook();
-    // Trades as a native Excel Table — sortable/filterable, frozen header.
-    // We deliberately DO NOT paint each cell (fill/font/border): ~33k
-    // individually-styled cells is what crashed Excel on sort (confirmed by
-    // bisecting: a plain Table sorts fine, the painted one crashes). The
-    // Table's built-in banding gives structure cheaply. (2026-06-12)
-    const ws = wb.addWorksheet("trades", { views: [{ state: "frozen", ySplit: 1 }] });
-    ws.addTable({
-      name: "TradesTable", ref: "A1", headerRow: true,
-      style: { theme: "TableStyleMedium2", showRowStripes: true },
-      columns: cols.map((c) => ({ name: c, filterButton: true })),
-      rows: flats.map((r) => cols.map((c) => (r[c] === undefined ? null : r[c]))),
-    });
-    // Width: longest of header/values per column, clamped to a sane band.
-    cols.forEach((c, i) => {
-      let w = c.length;
-      for (const r of flats) {
-        const v = r[c];
-        if (v != null) w = Math.max(w, String(v).length);
-      }
-      ws.getColumn(i + 1).width = Math.min(28, Math.max(8, w + 2));
-    });
-    // 2026-06-11 — second worksheet: the experiment scoreboard (same snapshot
-    // block the Experiments panel renders), one row per running judgment.
-    const exp = (snap?.experiments && snap.experiments.experiments) || [];
-    if (exp.length) {
-      const ecols = ["title", "status", "start_date", "judge_date", "day", "of",
-                     "sessions", "n", "judgment_label", "judgment_value",
-                     "h1_value", "h2_value", "note"];
-      const ws2 = wb.addWorksheet("experiments", { views: [{ state: "frozen", ySplit: 1 }] });
-      ws2.addTable({
-        name: "ExperimentsTable", ref: "A1", headerRow: true,
-        style: { theme: "TableStyleMedium2", showRowStripes: true },
-        columns: ecols.map((c) => ({ name: c, filterButton: true })),
-        rows: exp.map((e) => {
-          const flat = { ...e,
-            h1_value: e.h1 ? e.h1.value : null,
-            h2_value: e.h2 ? e.h2.value : null };
-          return ecols.map((c) => (flat[c] === undefined ? null : flat[c]));
-        }),
-      });
-      ecols.forEach((c, i) => {
-        let w = c.length;
-        for (const e of exp) {
-          const v = c === "h1_value" ? (e.h1 && e.h1.value)
-                  : c === "h2_value" ? (e.h2 && e.h2.value) : e[c];
-          if (v != null) w = Math.max(w, String(v).length);
-        }
-        ws2.getColumn(i + 1).width = Math.min(34, Math.max(8, w + 2));
-      });
-    }
-    // 2026-07-31 — third worksheet: the xcross echo-guard shadow ledger, so
-    // the one XLSX carries trades + experiments + the wiggle/fakeout tags.
-    const echo = (snap?.echo_guard && snap.echo_guard.events) || [];
-    if (echo.length) {
-      const ws3 = wb.addWorksheet("echo_guard", { views: [{ state: "frozen", ySplit: 1 }] });
-      ws3.addTable({
-        name: "EchoGuardTable", ref: "A1", headerRow: true,
-        style: { theme: "TableStyleMedium2", showRowStripes: true },
-        columns: ECHO_COLS.map((c) => ({ name: c, filterButton: true })),
-        rows: echo.map((e) => ECHO_COLS.map((c) => (e[c] === undefined ? null : e[c]))),
-      });
-      ECHO_COLS.forEach((c, i) => {
-        let w = c.length;
-        for (const e of echo) {
-          const v = e[c];
-          if (v != null) w = Math.max(w, String(v).length);
-        }
-        ws3.getColumn(i + 1).width = Math.min(20, Math.max(8, w + 2));
-      });
-    }
-    const buf = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `flipper_${snap.session_date || "today"}_trade_breakdown.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  function streakClass(side) {
-    return side === "CALL" ? "verdict-CALL" : side === "PUT" ? "verdict-PUT" : "";
-  }
-  function regimeClass(r) {
-    if (r == null) return "";
-    if (r <= 1.5) return "green";  // trend
-    if (r > 3.0) return "red";     // chop
-    return "";                     // normal band
-  }
-
-  // -------- TI Context (observation-only story-tag tracking) --------
-  // 2026-06-02 — renders state.ti_context: per-story_tag outcome buckets
-  // (all-time) + today's individual fires with their TI labels. The suspected
-  // loser bucket (MIDDLE_NOISE / MIXED) is flagged yellow so the falsifiable
-  // claim is eyeballable. Section stays hidden until the table has rows.
-  function tagClass(tag) {
-    if (tag === "MIDDLE_NOISE" || tag === "MIXED") return "yellow";
-    if (tag === "TREND_WITH" || (tag || "").startsWith("REVERSAL")) return "green";
-    return "dim-num";
-  }
-  function winCls(w) { return w == null ? "" : w >= 60 ? "green" : w < 50 ? "red" : "yellow"; }
-
-  function renderTiContext(snap) {
-    const ti = snap.ti_context;
-    const section = $("ti-section");
-    if (!ti || !ti.total_fires) { section.style.display = "none"; return; }
-    section.style.display = "";
-    $("ti-total").textContent = `· ${ti.total_fires} fires all-time`;
-
-    // By-tag rollup
-    const tagRows = (ti.by_tag || []).map(b => `<tr>
-        <td><strong class="${tagClass(b.story_tag)}">${b.story_tag}</strong></td>
-        <td class="num">${b.fires}</td>
-        <td class="num">${b.closed}${b.open ? ` <span class="tiny">(+${b.open} open)</span>` : ""}</td>
-        <td class="num ${winCls(b.win_pct)}">${b.win_pct == null ? "—" : b.win_pct.toFixed(0) + "%"}</td>
-        <td class="num ${fmtPctCls(b.avg_pnl_pct)}">${b.avg_pnl_pct == null ? "—" : fmtPct(b.avg_pnl_pct)}</td>
-        <td class="num">${fmtDur(b.avg_hold_sec)}</td>
-      </tr>`).join("");
-    $("ti-tag-wrap").innerHTML = tagRows ? `<table>
-        <thead><tr><th>Story Tag</th><th class="num">Fires</th><th class="num">Closed</th>
-          <th class="num">Win%</th><th class="num">Avg P&L%</th><th class="num">Avg Hold</th></tr></thead>
-        <tbody>${tagRows}</tbody></table>` : `<div class="empty">No fires yet.</div>`;
-
-    // 2026-06-10 — edge-hunt pilot-tag rollups (r3m_abs_trend_sign: POS = the
-    // forward-favored "absorption rebuilding" bucket; print_burst_present: BURST
-    // vs the dead-tape bleed bucket). Both record-only; this is the judge view.
-    // UNTAGGED = fires from before the bot migrated ti_context (forward-only).
-    const pilotTable = (title, sub, rows) => {
-      const body = (rows || []).map(b => `<tr>
-          <td><strong>${b.bucket}</strong></td>
-          <td class="num">${b.fires}</td>
-          <td class="num">${b.closed}</td>
-          <td class="num ${winCls(b.win_pct)}">${b.win_pct == null ? "—" : b.win_pct.toFixed(0) + "%"}</td>
-          <td class="num ${fmtPctCls(b.avg_pnl_pct)}">${b.avg_pnl_pct == null ? "—" : fmtPct(b.avg_pnl_pct)}</td>
-        </tr>`).join("");
-      return body ? `<table>
-        <thead><tr><th>${title} <span class="tiny">${sub}</span></th><th class="num">Fires</th>
-          <th class="num">Closed</th><th class="num">Win%</th><th class="num">Avg P&L%</th></tr></thead>
-        <tbody>${body}</tbody></table>` : "";
-    };
-    const r3mTbl = pilotTable("r3m_abs_trend_sign", "POS = rebuilding", ti.by_r3m_abs_trend_sign);
-    const burstTbl = pilotTable("print_burst_present", "BURST vs dead tape", ti.by_print_burst);
-    $("ti-pilot-wrap").innerHTML = (r3mTbl || burstTbl)
-      ? `<div class="scroll-x">${r3mTbl}</div><div class="scroll-x" style="margin-top:10px">${burstTbl}</div>`
-      : `<div class="empty">No fires yet.</div>`;
-
-    // Today's fires
-    const todayRows = (ti.today || []).map(f => {
-      const sideCls = f.direction === "CALL" ? "side-CALL" : f.direction === "PUT" ? "side-PUT" : "";
-      return `<tr>
-        <td>${fmtTime(f.ts_iso)}</td>
-        <td class="dim-num">${f.trigger_type || "—"}</td>
-        <td><strong class="${sideCls}">${f.direction || "—"}</strong></td>
-        <td><strong class="${tagClass(f.story_tag)}">${f.story_tag || "—"}</strong>${f.snapshot_error ? ' <span class="red tiny">err</span>' : ""}</td>
-        <td class="tiny">${f.vwap_zone || "—"}</td>
-        <td class="tiny">${f.rsi_zone || "—"}</td>
-        <td class="tiny">${f.macd_hist_zone || "—"}</td>
-        <td class="tiny">${f.bb_zone || "—"}</td>
-        <td class="tiny"><strong class="${f.r3m_abs_trend_sign === 'POS' ? 'green' : f.r3m_abs_trend_sign === 'NEG' ? 'red' : 'dim-num'}">${f.r3m_abs_trend_sign || "—"}</strong></td>
-        <td class="tiny"><strong class="${f.print_burst_present === 1 ? 'green' : f.print_burst_present === 0 ? 'dim-num' : ''}">${f.print_burst_present == null ? "—" : f.print_burst_present ? "BURST" : "·"}</strong></td>
-        <td class="num ${fmtPctCls(f.pnl_pct)}">${f.pnl_pct == null ? '<span class="tiny">open</span>' : fmtPct(f.pnl_pct)}</td>
-      </tr>`;
-    }).join("");
-    $("ti-today-wrap").innerHTML = todayRows ? `<div class="scroll-x"><table>
-        <thead><tr><th>Time</th><th>Trigger</th><th>Dir</th><th>Story</th>
-          <th>VWAP zone</th><th>RSI</th><th>MACD hist</th><th>BB</th><th>r3m abs</th><th>burst</th><th class="num">P&L%</th></tr></thead>
-        <tbody>${todayRows}</tbody></table></div>` : `<div class="empty">No fires today.</div>`;
-  }
-
-  // 2026-06-10 — two-leg paper rollup. One row per scope (today / all-time);
-  // complete pairs only (both legs closed). RUNNER − SCALP is the design's
-  // judgment number: positive = the wide runner earns more than the strict
-  // first-floor bank it replaces.
-  // 2026-06-11 — RADICAL third leg (wide-net-early exit A/B): three columns
-  // appended, rendered as dashes until the first radical pairs land
-  // (radical_* keys absent pre-restart / pre-data).
-  function renderTwoLeg(snap) {
-    const tl = snap.two_leg;
-    const sec = $("two-leg-section");
-    if (!tl || (!tl.total && !tl.today)) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    const row = (label, a) => !a ? "" : `<tr>
-        <td><strong>${label}</strong></td>
-        <td class="num">${a.pairs}</td>
-        <td class="num ${winCls(a.scalp_wr)}">${a.scalp_wr.toFixed(0)}%</td>
-        <td class="num ${fmtPctCls(a.scalp_avg)}">${fmtPct(a.scalp_avg)}</td>
-        <td class="num ${winCls(a.runner_wr)}">${a.runner_wr.toFixed(0)}%</td>
-        <td class="num ${fmtPctCls(a.runner_avg)}">${fmtPct(a.runner_avg)}</td>
-        <td class="num ${fmtPctCls(a.blend_avg)}">${fmtPct(a.blend_avg)}</td>
-        <td class="num ${fmtPctCls(a.blend_net)}">${fmtPct(a.blend_net)}</td>
-        <td class="num ${fmtPctCls(a.runner_minus_scalp_avg)}"><strong>${fmtPct(a.runner_minus_scalp_avg)}</strong></td>
-        <td class="num">${a.radical_pairs != null ? `${a.radical_wr.toFixed(0)}% <span class="dim-num">(${a.radical_pairs})</span>` : "—"}</td>
-        <td class="num ${a.radical_avg != null ? fmtPctCls(a.radical_avg) : ""}">${a.radical_avg != null ? fmtPct(a.radical_avg) : "—"}</td>
-        <td class="num ${a.radical_minus_scalp_avg != null ? fmtPctCls(a.radical_minus_scalp_avg) : ""}">${a.radical_minus_scalp_avg != null ? `<strong>${fmtPct(a.radical_minus_scalp_avg)}</strong>` : "—"}</td>
-      </tr>`;
-    const body = row("TODAY", tl.today) + row("ALL", tl.total);
-    $("two-leg-wrap").innerHTML = body ? `<div class="scroll-x"><table>
-        <thead><tr><th></th><th class="num">Pairs</th>
-          <th class="num">Scalp W%</th><th class="num">Scalp avg</th>
-          <th class="num">Runner W%</th><th class="num">Runner avg</th>
-          <th class="num">Blend avg</th><th class="num">Blend net</th>
-          <th class="num">Runner − Scalp</th>
-          <th class="num">Radical W%</th><th class="num">Radical avg</th>
-          <th class="num">Radical − Scalp</th></tr></thead>
-        <tbody>${body}</tbody></table></div>` : `<div class="empty">No pairs yet.</div>`;
-  }
-
-  // 2026-06-11 — Experiment scoreboard. buildExperimentsHtml is pure
-  // (snapshot block in, HTML string out) so the Node smoke test can run it
-  // verbatim. Day clock starts at the first DATA row, not the build date —
-  // pending-restart lag taught us those differ.
-  function expStatusPill(st) {
-    if (st === "RUNNING") return '<strong class="yellow">RUNNING</strong>';
-    if (st === "JUDGE_NOW") return '<strong style="color:var(--accent)">JUDGE NOW</strong>';
-    if (st === "WAITING_DATA") return '<span class="dim-num">WAITING</span>';
-    return '<strong class="red">' + (st || "?") + "</strong>";
-  }
-  function expHalf(h) {
-    if (!h) return '<span class="dim-num tiny">—</span>';
-    if (h.value == null) return '<span class="dim-num tiny">n/a</span>';
-    return `<span class="${fmtPctCls(h.value)}">${fmtPct(h.value)}</span> <span class="tiny">(${h.sessions}s)</span>`;
-  }
-  function buildExperimentsHtml(ex) {
-    const list = (ex && ex.experiments) || [];
-    if (!list.length) return "";
-    const rows = list.map(e => {
-      const pct = e.day != null && e.of ? Math.min(100, Math.round(e.day / e.of * 100)) : 0;
-      const bar = `<div style="background:var(--line);height:4px;border-radius:2px;min-width:64px;margin-top:3px">
-          <div style="width:${pct}%;background:var(${pct >= 100 ? "--accent" : "--yellow"});height:4px;border-radius:2px"></div></div>`;
-      return `<tr>
-        <td><strong>${e.title}</strong>${e.note ? `<div class="tiny">${e.note}</div>` : ""}</td>
-        <td>${e.day != null ? `<span class="tiny">day ${e.day}/${e.of}</span>${bar}` : '<span class="dim-num tiny">—</span>'}</td>
-        <td class="num">${e.sessions || "—"}</td>
-        <td class="num">${e.n || "—"}</td>
-        <td class="num">${e.judgment_value == null ? '<span class="dim-num">—</span>'
-            : `<strong class="${fmtPctCls(e.judgment_value)}">${fmtPct(e.judgment_value)}</strong>`}
-          <div class="tiny">${e.judgment_label || ""}</div></td>
-        <td class="num">${expHalf(e.h1)}</td>
-        <td class="num">${expHalf(e.h2)}</td>
-        <td>${expStatusPill(e.status)}</td>
-      </tr>`;
-    }).join("");
-    return `<div class="scroll-x"><table>
-      <thead><tr><th>Experiment</th><th>Clock</th><th class="num">Sessions</th><th class="num">n</th>
-        <th class="num">Judgment</th><th class="num">H1</th><th class="num">H2</th><th>Status</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>`;
-  }
-  function renderExperiments(snap) {
-    const sec = $("exp-section");
-    const html = buildExperimentsHtml(snap.experiments);
-    if (!html) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    $("exp-wrap").innerHTML = html;
-  }
-
-  // 2026-06-11 — Daily debrief panel. Lessons are the headline; the loss
-  // buckets / clusters / CLAUDE-counterfactual lines are the evidence. The
-  // full table-level detail lives in reports/debrief_<date>.md, not here.
-  function buildDebriefHtml(d) {
-    if (!d || !d.lessons || !d.lessons.length) return "";
-    const h = d.headline || {};
-    const lessons = d.lessons.map(x => `<li style="margin:4px 0">${x}</li>`).join("");
-    let out = `<ol style="margin:6px 0 12px 20px;padding:0">${lessons}</ol>`;
-    const bits = [];
-    if (h.closed != null)
-      bits.push(`<strong class="${fmtPctCls(h.net)}">${fmtPct(h.net)}</strong> net · ${h.closed} closed · ${h.wr}% WR`);
-    const lb = d.loss_buckets;
-    if (lb && lb.losers) {
-      const tw = lb.buckets.TRULY_WRONG, sv = lb.buckets.SALVAGEABLE;
-      bits.push(`losers: <strong class="red">${tw.n} truly wrong</strong> (${fmtPct(tw.net)}) vs <strong class="yellow">${sv.n} salvageable</strong> (${fmtPct(sv.net)})`);
-    }
-    if (d.clusters && d.clusters.length) {
-      const c = d.clusters.map(c =>
-        `${c.n}× ${c.direction} in ${c.span_sec}s (${c.net == null ? "open" : fmtPct(c.net)})`).join(", ");
-      bits.push(`<strong class="yellow">stacked fires:</strong> ${c}`);
-    } else {
-      bits.push(`<span class="dim-num">no stacked-fire clusters</span>`);
-    }
-    const cf = d.claude_counterfactual;
-    if (cf && cf.no_trade_evaluated)
-      bits.push(`CLAUDE refusals: <strong class="green">${cf.dodged_loser} dodged</strong> / <strong class="red">${cf.cost_winner} cost</strong> / ${cf.flat} flat`);
-    // 2026-06-11 — recorder-integrity WATCH items (data_health). OK checks
-    // stay silent; anything WATCH (silent lane, NO_TAG births, thin OPTLEAD
-    // feed, CLAUDE errors, RUNNER decay misses) surfaces here.
-    const dh = d.data_health;
-    if (dh && dh.watch && dh.watch.length) {
-      const w = dh.watch.map(c => `${c.name}: ${c.detail}`).join(" · ");
-      bits.push(`<strong class="yellow">data health:</strong> ${w}`);
-    } else if (dh) {
-      bits.push(`<span class="dim-num">data health: all ${ (dh.checks||[]).length } checks OK</span>`);
-    }
-    out += bits.map(b => `<div class="watch-strip">${b}</div>`).join("");
-    return out;
-  }
-  function renderDebrief(snap) {
-    const sec = $("debrief-section");
-    const d = snap.debrief;
-    const html = buildDebriefHtml(d);
-    if (!html) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    $("debrief-meta").textContent =
-      `· ${d.session_date} · ${d.narrative_source} · full report: reports/debrief_${d.session_date}.md`;
-    $("debrief-wrap").innerHTML = html;
-  }
-
-  // 2026-06-11 — pre-flight badge. preflight_check.py re-runs on every bot
-  // start; PASS = quiet green, WARN/FAIL = loud with the failing checks in
-  // the pill text + everything in the tooltip.
-  function renderPreflight(snap) {
-    const pill = $("preflight-pill");
-    const p = snap?.preflight;
-    if (!p || !p.overall) { pill.style.display = "none"; return; }
-    pill.style.display = "";
-    const cls = p.overall === "PASS" ? "green" : p.overall === "WARN" ? "yellow" : "red";
-    const bad = (p.checks || []).filter(c => c.status === "FAIL" || c.status === "WARN");
-    const badTxt = bad.length ? " · " + bad.map(c => c.name).join(", ") : "";
-    $("preflight-text").innerHTML =
-      `preflight <strong class="${cls}">${p.overall}</strong>${badTxt}`;
-    pill.title = (p.checks || []).map(c => `${c.status} ${c.name}: ${c.detail}`).join("\n")
-      + `\nbot start ${p.bot_start_iso || "?"}`;
-  }
-
-  // 2026-06-11 — Weekly digest panel (Friday, publisher-triggered). Summary
-  // items + a one-line evidence strip; full tables in reports/weekly_<date>.md.
-  function buildWeeklyHtml(d) {
-    if (!d || !d.summary || !d.summary.length) return "";
-    const items = d.summary.map(x => `<li style="margin:4px 0">${x}</li>`).join("");
-    let out = `<ol style="margin:6px 0 12px 20px;padding:0">${items}</ol>`;
-    const bits = [];
-    const h = d.headline_this_week || {}, hp = d.headline_prior_week || {};
-    if (h.closed != null)
-      bits.push(`week <strong class="${fmtPctCls(h.net)}">${fmtPct(h.net)}</strong> net · ${h.closed} closed · ${h.wr}% WR` +
-        (hp.closed ? ` <span class="dim-num">(prior ${fmtPct(hp.net)} / ${hp.closed})</span>` : ""));
-    const r = d.rolling_live;
-    if (r)
-      bits.push(`live rolling-${r.n}: <strong class="${fmtPctCls(r.avg_pnl_pct)}">${fmtPct(r.avg_pnl_pct)}</strong>/trade · ${r.win_pct}% WR` +
-        (r.negative_expectancy ? ` <strong class="red">NEGATIVE</strong>` : ""));
-    const moved = (d.experiment_trajectory || []).filter(e => e.week_delta != null && Math.abs(e.week_delta) >= 1.0);
-    if (moved.length)
-      bits.push(`experiment movers: ` + moved.map(e =>
-        `${e.id} <span class="${fmtPctCls(e.week_delta)}">${fmtPct(e.week_delta)}</span>`).join(" · "));
-    out += bits.map(b => `<div class="watch-strip">${b}</div>`).join("");
-    return out;
-  }
-  function renderWeekly(snap) {
-    const sec = $("weekly-section");
-    const d = snap.weekly;
-    const html = buildWeeklyHtml(d);
-    if (!html) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    $("weekly-meta").textContent =
-      `· ${d.week_start} → ${d.week_end} · ${d.narrative_source} · full report: reports/weekly_${d.week_end}.md`;
-    $("weekly-wrap").innerHTML = html;
-  }
-
-  // 2026-06-11 — judge-day draft verdicts panel. One strip per judged
-  // experiment: lean + mechanical battery result + rationale. Drafts only.
-  function buildJudgmentHtml(d) {
-    if (!d || !d.judgments || !d.judgments.length) return "";
-    const leanCls = (l) => l === "LOOKS_SURVIVING" ? "green"
-      : l === "LOOKS_REFUTED" ? "red" : "yellow";
-    const strips = d.judgments.map(j => {
-      const b = j.battery || {};
-      const v = b.value;
-      return `<div class="watch-strip"><strong>${j.id}</strong> · ` +
-        `<strong class="${leanCls(j.lean)}">${j.lean}</strong> ` +
-        `<span class="dim-num">(${j.mechanical_result} · ${b.sessions ?? "?"} sessions · ` +
-        `value ${v == null ? "—" : v}${b.p_flip == null ? "" : " · p_flip " + b.p_flip})</span>` +
-        `<br>${j.rationale || ""}</div>`;
-    }).join("");
-    return strips +
-      `<div class="tiny" style="margin-top:6px">drafts only — confound pass (edge-skeptic) + ship/kill decision are not automated</div>`;
-  }
-  function renderJudgment(snap) {
-    const sec = $("judgment-section");
-    const d = snap.judgment;
-    const html = buildJudgmentHtml(d);
-    if (!html) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    $("judgment-meta").textContent =
-      `· ${d.run_date} · ${d.narrative_source} · briefs: reports/judgment_<id>_${d.run_date}.md`;
-    $("judgment-wrap").innerHTML = html;
-  }
-
-  // 2026-07-06 — Picture Decisions. buildPictureDecisionsHtml is pure
-  // (snapshot block in, {summary,regime,rows} HTML out) so it can be smoke-
-  // tested verbatim. Reasoning only: verdict + choir votes + dip/chase loc.
-  function pdVoteChip(label, v) {
-    if (v == null) return "";
-    const cls = v > 0 ? "green" : v < 0 ? "red" : "dim-num";
-    const s = v > 0 ? "+" + v : "" + v;
-    return `<span class="tiny ${cls}" style="margin-right:7px">${label}:${s}</span>`;
-  }
-  function pdLocChip(loc) {
-    if (loc === "TOP") return '<span class="tiny yellow">TOP</span>';   // extended = chase risk
-    if (loc === "DIP") return '<span class="tiny green">DIP</span>';    // pulled back = ride
-    if (loc === "MID") return '<span class="tiny dim-num">MID</span>';
-    return '<span class="tiny dim-num">—</span>';
-  }
-  function buildPictureDecisionsHtml(pd) {
-    if (!pd || !pd.n) return null;
-    const lm = pd.location_mix || {};
-    const summary = [
-      { label: "Entries", value: pd.n, cls: "",
-        sub: `${pd.calls} call · ${pd.puts} put` },
-      { label: "Location mix", valueHtml:
-        `${pdLocChip("TOP")} ${lm.TOP || 0} · ${pdLocChip("MID")} ${lm.MID || 0} · ${pdLocChip("DIP")} ${lm.DIP || 0}` },
-      { label: "Chase vs ride (CALLs)", valueHtml:
-        `<span class="yellow">chase @top ${pd.chase_call_at_top || 0}</span> · <span class="green">ride @dip ${pd.ride_call_at_dip || 0}</span>` },
-    ].map(c => `<div class="card">
-        <div class="label">${c.label}</div>
-        <div class="value ${c.cls || ""}" style="font-size:${c.valueHtml ? "13px" : "22px"}">${c.valueHtml || c.value}</div>
-        ${c.sub ? `<div class="sub">${c.sub}</div>` : ""}
-      </div>`).join("");
-
-    const rrows = (pd.by_regime || []).map(r => `<tr>
-        <td><strong>${r.regime}</strong></td>
-        <td class="num">${r.n}</td>
-        <td class="num green">${r.calls}</td>
-        <td class="num red">${r.puts}</td></tr>`).join("");
-    const regime = rrows ? `<div class="scroll-x"><table>
-        <thead><tr><th>Regime</th><th class="num">n</th><th class="num">CALL</th><th class="num">PUT</th></tr></thead>
-        <tbody>${rrows}</tbody></table></div>` : "";
-
-    const erows = (pd.rows || []).slice().reverse().map(e => {
-      const dirCls = e.dir === "CALL" ? "green" : "red";
-      const cs = e.choir == null ? "" : (e.choir >= 0 ? "+" + e.choir : "" + e.choir);
-      return `<tr>
-        <td class="tiny">${e.t}</td>
-        <td class="tiny">${e.type}</td>
-        <td class="${dirCls}"><strong>${e.dir}</strong></td>
-        <td><span class="tiny">${e.regime}</span>${e.dip_entry ? ' <span class="tiny green">dip-buy</span>' : ""}</td>
-        <td class="num">${e.z == null ? "—" : e.z.toFixed(2)}</td>
-        <td>${pdVoteChip("sl", e.votes.slope)}${pdVoteChip("rsi", e.votes.rsi)}${pdVoteChip("macd", e.votes.macd)}${pdVoteChip("bb", e.votes.bb)}<span class="tiny dim-num">Σ${cs}</span></td>
-        <td>${pdLocChip(e.loc)}</td></tr>`;
-    }).join("");
-    const rows = erows ? `<div class="scroll-x"><table>
-        <thead><tr><th>Time</th><th>Type</th><th>Dir</th><th>Regime</th><th class="num">z</th>
-          <th>Choir votes (singer picks regime, choir votes inside)</th><th>Loc</th></tr></thead>
-        <tbody>${erows}</tbody></table></div>` : `<div class="empty">No picture entries yet.</div>`;
-    return { summary, regime, rows };
-  }
-  function renderPictureDecisions(snap) {
-    const sec = $("picdec-section");
-    const h = buildPictureDecisionsHtml(snap.picture_decisions);
-    if (!h) { sec.style.display = "none"; return; }
-    sec.style.display = "";
-    $("picdec-summary").innerHTML = h.summary;
-    $("picdec-regime-wrap").innerHTML = h.regime;
-    $("picdec-rows-wrap").innerHTML = h.rows;
-  }
-
-  function setStatus(snap) {
-    const bot = snap?.bot || {};
-    $("session-date").textContent = snap?.session_date || "—";
-    const dot = $("status-dot");
-    if (bot.running) { dot.classList.add("on"); dot.classList.remove("off"); $("status-text").textContent = "BOT RUNNING"; }
-    else { dot.classList.add("off"); dot.classList.remove("on"); $("status-text").textContent = `BOT STOPPED (${bot.seconds_since_heartbeat ?? "?"}s)`; }
-    const [mt, mc] = modeText(bot);
-    $("mode-text").textContent = mt;
-    $("mode-text").className = mc;
-
-    // 2026-05-20 — AVI live pill. Three-layer-stack trigger: A (r1m_abs_ratio)
-    // is the magnitude trigger, V (r1m_volume / session_avg) and |I|
-    // (r1m_imb_ratio) are filters, multi-TF imb-sign drives direction.
-    // Reads avi_state.json via publisher.load_live_avi → state.live_avi.
-    const avi = snap?.live_avi;
-    if (avi && avi.a_last != null) {
-      $("avi-pill").style.display = "";
-      const a   = Number(avi.a_last);
-      const v   = avi.v_last  != null ? Number(avi.v_last)  : null;
-      const im  = avi.i_last  != null ? Number(avi.i_last)  : null;
-      const aT  = avi.a_trend_threshold || 1.50;
-      const vT  = avi.v_trend_threshold || 1.11;
-      const aF  = avi.a_fade_threshold  || 1.95;
-      const iF  = avi.i_fade_threshold  || 1.17;
-      const aCls = a >= aF ? "red" : a >= aT ? "yellow" : "dim-num";
-      const vCls = v == null ? "dim-num" : v >= vT ? "green" : "dim-num";
-      const iCls = im == null ? "dim-num" : im >= iF ? "green" : "dim-num";
-      const imb1 = Number(avi.imb_sign_1m || 0);
-      // 2026-05-28 — lens-aware AVI pill. flow_tf_label is "5m" or "6m". The
-      // pill shows the narrowest + widest legs of the active consensus stack
-      // (1m FADE direction + flow TF + 12m/15m widest) plus the active
-      // consensus sign.
-      const stack = avi.consensus_stack || "6_9_12";
-      const flowTf = avi.flow_tf_label || (stack === "5_10_15" ? "5m" : "6m");
-      const wideTf = stack === "5_10_15" ? "15m" : "12m";
-      const imbFlow = Number(
-        avi.imb_sign_active_flow != null
-          ? avi.imb_sign_active_flow
-          : (stack === "5_10_15" ? avi.imb_sign_5m : avi.imb_sign_6m) || 0
-      );
-      const imbWide = Number(
-        (stack === "5_10_15" ? avi.imb_sign_15m : avi.imb_sign_12m) || 0
-      );
-      const cons = Number(
-        avi.consensus_active != null
-          ? avi.consensus_active
-          : (stack === "5_10_15" ? avi.consensus_5_10_15 : avi.consensus_6_9_12) || 0
-      );
-      const sign = (n) => n > 0 ? "↑" : n < 0 ? "↓" : "·";
-      const cls = (n) => n > 0 ? "green" : n < 0 ? "red" : "dim-num";
-      const armedTxt = avi.fade_armed
-        ? '<strong class="red">FADE ARMED</strong>'
-        : (avi.trend_armed
-            ? '<strong class="green">TREND ARMED</strong>'
-            : '<span class="dim-num">idle</span>');
-      const sideTxt = avi.side
-        ? `<strong class="side-${avi.side}">${avi.side}${avi.entry_type ? " " + avi.entry_type : ""}</strong>`
-        : '<span class="dim-num">FLAT</span>';
-      $("avi-text").innerHTML =
-        `A <span class="${aCls}"><strong>${a.toFixed(2)}</strong></span> · ` +
-        `V <span class="${vCls}">${v == null ? "—" : v.toFixed(2)}</span> · ` +
-        `|I| <span class="${iCls}">${im == null ? "—" : im.toFixed(2)}</span> · ` +
-        `imb <span class="${cls(imb1)}">${sign(imb1)}1m</span>` +
-        `<span class="${cls(imbFlow)}">${sign(imbFlow)}${flowTf}</span>` +
-        `<span class="${cls(imbWide)}">${sign(imbWide)}${wideTf}</span> ` +
-        `cons<span class="${cls(cons)}">${sign(cons)}</span> · ` +
-        `${armedTxt} · ${sideTxt}`;
-    } else {
-      $("avi-pill").style.display = "none";
-    }
-
-    // range/ORB regime pill — kept as observational context. Hide if no data.
-    const regime = snap?.live_regime;
-    if (regime && regime.range_orb_ratio != null) {
-      $("regime-pill").style.display = "";
-      const r = regime.range_orb_ratio;
-      $("regime-text").innerHTML = `R/ORB · <span class="${regimeClass(r)}">${r.toFixed(2)}</span>`;
-    } else {
-      $("regime-pill").style.display = "none";
-    }
-
-    $("generated-at").textContent = `generated ${fmtTime(snap?.generated_at_iso)}`;
-  }
-
-  let lastOk = null;
-  let lastSnap = null;
-  async function tick() {
-    try {
-      // Cache-buster: gist raw URLs are CDN-cached up to ~60s; this nudges a fresh fetch.
-      const url = dataUrl() + (dataUrl().includes("?") ? "&" : "?") + "_=" + Date.now();
-      const res = await fetch(url, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      const snap = await res.json();
-      lastSnap = snap;
-      setStatus(snap);
-      renderStats(snap);
-      renderOpenPositions(snap);
-      renderTrades(snap);
-      // 2026-07-31 — echo CSV is independent of trades (events can exist on a
-      // 0-trade day); enable off its own section.
-      $("echo-csv-btn").disabled =
-        !(snap.echo_guard && snap.echo_guard.events && snap.echo_guard.events.length);
-      renderTiContext(snap);
-      renderTwoLeg(snap);
-      renderExperiments(snap);
-      renderDebrief(snap);
-      renderPreflight(snap);
-      renderWeekly(snap);
-      renderJudgment(snap);
-      renderPictureDecisions(snap);
-      lastOk = new Date();
-      $("last-update").textContent = "updated " + lastOk.toLocaleTimeString([], { hour12: false });
-    } catch (e) {
-      $("last-update").textContent = "fetch failed: " + e.message;
-      $("last-update").className = "red";
-    }
-  }
-  $("csv-btn").addEventListener("click", () => { if (lastSnap) downloadCsv(lastSnap); });
-  $("echo-csv-btn").addEventListener("click", () => { if (lastSnap) downloadEchoCsv(lastSnap); });
-  $("xlsx-btn").addEventListener("click", async () => {
-    if (!lastSnap) return;
-    const btn = $("xlsx-btn");
-    const original = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Building...";
-    try {
-      await downloadXlsx(lastSnap);
-      btn.textContent = original;
-    } catch (e) {
-      btn.textContent = "Error: " + e.message;
-      setTimeout(() => { btn.textContent = original; }, 4000);
-    } finally {
-      btn.disabled = false;
-    }
-  });
-  // 2026-05-19 — tape CSV button: blob-download to force save. The HTML
-  // download attr is ignored cross-origin (gist is a different origin than
-  // GitHub Pages), so anchor-with-href just rendered the CSV inline. Fetch
-  // the file, wrap in a Blob (same-origin), trigger a temp anchor click,
-  // revoke the object URL. Works against both gist and local mirror.
-  $("tape-csv-btn").addEventListener("click", async (ev) => {
-    ev.preventDefault();
-    const btn = $("tape-csv-btn");
-    const original = btn.textContent;
-    const base = tapeCsvUrl();
-    const url = base + (base.includes("?") ? "&" : "?") + "_=" + Date.now();
-    btn.textContent = "Downloading...";
-    try {
-      const resp = await fetch(url, { cache: "no-store" });
-      if (!resp.ok) throw new Error("HTTP " + resp.status);
-      const blob = await resp.blob();
-      const objUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = objUrl;
-      a.download = "tick_tape_today.csv";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objUrl);
-      btn.textContent = original;
-    } catch (e) {
-      btn.textContent = "Error: " + e.message;
-      setTimeout(() => { btn.textContent = original; }, 4000);
-    }
-  });
-  tick();
-  setInterval(tick, REFRESH_MS);
+}
+load();
+setInterval(load, 60000);
 </script>
 </body>
 </html>
