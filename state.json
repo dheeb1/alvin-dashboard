@@ -1,6 +1,6 @@
 {
  "v": 3,
- "generated_at": "2026-08-14T17:10:24",
+ "generated_at": "2026-08-16T10:43:36",
  "market_open": false,
  "components": {
   "server": "up",
@@ -16,6 +16,10 @@
    {
     "d": "2026-08-14",
     "eq": 79924.73
+   },
+   {
+    "d": "2026-08-16",
+    "eq": 79924.73
    }
   ]
  },
@@ -26,77 +30,74 @@
   "august_halted": false
  },
  "august": {
-  "mode": "dryrun",
+  "mode": "paper",
   "enabled": true,
-  "today": "base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE",
+  "today": "no session yet",
   "history": [
    {
     "d": "2026-08-14",
     "mode": "dryrun",
     "verdict": "base=777.84 p@09:00CT=778.42 move=+0.075% -> NO TRADE"
    }
+  ],
+  "slots": [
+   {
+    "name": "orb_0915",
+    "enabled": true,
+    "entry_ct": "09:15",
+    "signal": "\u2014",
+    "trade": null,
+    "record": {
+     "n": 0,
+     "w": 0,
+     "net": 0.0
+    }
+   },
+   {
+    "name": "fade_1030",
+    "enabled": true,
+    "entry_ct": "10:30",
+    "signal": "\u2014",
+    "trade": null,
+    "record": {
+     "n": 0,
+     "w": 0,
+     "net": 0.0
+    }
+   },
+   {
+    "name": "control_1300",
+    "enabled": true,
+    "entry_ct": "13:00",
+    "signal": "coin flip -> call (control slot)",
+    "trade": null,
+    "record": {
+     "n": 0,
+     "w": 0,
+     "net": 0.0
+    }
+   },
+   {
+    "name": "momentum_1400",
+    "enabled": true,
+    "entry_ct": "14:00",
+    "signal": "\u2014",
+    "trade": null,
+    "record": {
+     "n": 0,
+     "w": 0,
+     "net": 0.0
+    }
+   }
   ]
  },
  "tournament": {
-  "signals_today": 5,
-  "by_strategy": {
-   "ema9x21_v1": 1,
-   "rotation_test": 1,
-   "shakedown_v1": 1,
-   "bridge_test": 1,
-   "?": 1
-  },
-  "recent": [
-   {
-    "strategy": "ema9x21_v1",
-    "action": "buy",
-    "sl": 0.04975,
-    "tp": 0.09951,
-    "status": "SIGNAL_RECEIVED",
-    "at": "13:45"
-   },
-   {
-    "strategy": "rotation_test",
-    "action": "buy",
-    "sl": 0.01,
-    "tp": 0.02,
-    "status": "SIGNAL_RECEIVED",
-    "at": "13:30"
-   },
-   {
-    "strategy": "shakedown_v1",
-    "action": "sell",
-    "sl": 0.01,
-    "tp": 0.02,
-    "status": "SIGNAL_RECEIVED",
-    "at": "09:35"
-   },
-   {
-    "strategy": "bridge_test",
-    "action": "buy",
-    "sl": 0.01,
-    "tp": 0.02,
-    "status": "SIGNAL_RECEIVED",
-    "at": "07:49"
-   },
-   {
-    "strategy": "?",
-    "action": "buy",
-    "sl": null,
-    "tp": null,
-    "status": "SIGNAL_RECEIVED",
-    "at": "07:39"
-   }
-  ]
+  "signals_today": 0,
+  "by_strategy": {},
+  "recent": []
  },
  "rejects": {
-  "today": 1,
-  "recent": [
-   {
-    "kind": "auth_reject",
-    "detail": "2600:6c40:f00:e2a:568:47c3:a770:155b: invalid or missing token",
-    "at": "13:30"
-   }
-  ]
+  "today": 0,
+  "recent": []
  }
 }

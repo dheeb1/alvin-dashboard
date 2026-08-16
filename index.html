@@ -84,8 +84,9 @@
 <div class="grid" id="tiles"></div>
 
 <section class="block">
-  <h2>AUGUST — 0DTE bot</h2>
+  <h2>AUGUST — 0DTE strategy roster</h2>
   <div id="august" class="sub2">—</div>
+  <div id="augroster" style="margin-top:10px"></div>
   <div id="aughist" style="margin-top:10px"></div>
 </section>
 
@@ -167,6 +168,26 @@ function render(st) {
   document.getElementById("august").innerHTML =
     `<span class="tag"><span class="dot ${aug.enabled ? "up" : "off"}"></span>${aug.enabled ? "enabled" : "disabled"} · mode: ${esc(aug.mode)}</span>` +
     `<div class="sub2" style="margin-top:8px">${esc(aug.today)}</div>`;
+  const SLOT_COLORS = ["var(--s1)", "var(--s2)", "var(--s3)", "var(--s4)"];
+  const money = v => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toFixed(2)}`;
+  const slots = aug.slots || [];
+  document.getElementById("augroster").innerHTML = slots.length
+    ? `<table><tr><th>slot</th><th>entry CT</th><th>today's signal</th><th>today's trade</th><th>record</th></tr>` +
+      slots.map((s, i) => {
+        const dot = `<span class="dot" style="background:${SLOT_COLORS[i % 4]};display:inline-block;margin-right:6px"></span>`;
+        let tradeHtml = `<span style="color:var(--muted)">—</span>`;
+        if (s.trade) {
+          tradeHtml = s.trade.open
+            ? `<span style="color:var(--warning);font-weight:700">OPEN</span> ${esc(s.trade.dir)} @ ${s.trade.entry}`
+            : `<span class="${s.trade.pnl >= 0 ? "pl-pos" : "pl-neg"}" style="font-weight:700">${money(s.trade.pnl)}</span> <span style="color:var(--muted)">${esc(s.trade.reason)}</span>`;
+        }
+        const r = s.record || {};
+        const recHtml = r.n
+          ? `${r.w}/${r.n} · <span class="${r.net >= 0 ? "pl-pos" : "pl-neg"}">${money(r.net)}</span>`
+          : `<span style="color:var(--muted)">no fills yet</span>`;
+        return `<tr${s.enabled ? "" : ' style="opacity:.45"'}><td>${dot}${esc(s.name)}</td><td>${esc(s.entry_ct)}</td><td>${esc(s.signal)}</td><td>${tradeHtml}</td><td class="mono">${recHtml}</td></tr>`;
+      }).join("") + `</table>`
+    : "";
   document.getElementById("aughist").innerHTML = (aug.history && aug.history.length)
     ? `<table><tr><th>date</th><th>mode</th><th>session verdict</th></tr>` +
       aug.history.map(h => `<tr><td>${esc(h.d)}</td><td>${esc(h.mode)}</td><td>${esc(h.verdict)}</td></tr>`).join("") + `</table>`
